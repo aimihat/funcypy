@@ -8,18 +8,18 @@ open Tokeniser
 
 let print x = printfn "%A" x
 exception TokenException of int * string
-
-//////////////////// AST DEFINITION ////////////////////
+ 
+//////////////////////////////////////// AST DEFINITION ///////////////////////////////////////
 type Arithmetic = Add | Subtract | Multiply | Divide
 type Comparison = Eq | Ne | Lt | Gt | Le | Ge
 type Identifier = string
 
-type Value =
+type Literal =
     | Bool of bool
     | Int of int
     | Double of double
     | String of string
-    | Tuple of Value*Value
+    | Tuple of Literal*Literal
 
 type Ast =    
     | Statement of Ast    
@@ -32,7 +32,7 @@ type Ast =
     | Combinator of CombinatorType
 and Ex =
     | Single of Ast
-    | Literal of Value
+    | Literal of Literal
     | Variable of Identifier
     | Arithmetic of Ex * Arithmetic * Ex
     | Comparison of Ex * Comparison * Ex
@@ -41,8 +41,7 @@ and CombinatorType =
     | I 
     | S
 
-///////////////////// TOKEN PREPROCESSING /////////////////////
-
+///////////////////////////////////// TOKEN PREPROCESSING /////////////////////////////////////
 // Generic function that checks if token is specific operator token in list
 let isSpecTokenInList (lst: string list) =
     function
@@ -67,28 +66,7 @@ let isUnaryTok = isSpecTokenInList unaryOps
 // Checks if token is Comparison operator
 let isComparisonTok = isSpecTokenInList comparisonOps
 
-
-
-////////////////////// TOP LEVEL ////////////////////
-// ROUNDBRA ::= "(" EXPRESSION ")"
-// SQBRA ::= "[" EXPRESSION "]"
-// EXPRESSION ::= !!!!SINGLE!!!! | LITERAL | VARIABLE | ARITHMETIC | COMPARISON
-// SINGLE ::= STATEMENT | FUNCTION | CONDITIONAL | EXPRESSION
-// FUNCTION ::= [ IDENTIFIER ] * IDENTIFIER * AST
-// CONDITIONAL ::= EXPRESSION * SINGLE * [ SINGLE ]
-// CALL ::= SINGLE * SINGLE
-// TUPLE ::= LITERAL * LITERAL
-// //////////////////// BOTTOM LEVEL ////////////////////
-//    IDENTIFIER ::= STRING
-//    VARIABLE   ::= IDENTIFIER
-//    LITERAL    ::= BOOL | INT | DOUBLE | STRING | TUPLE
-//    ARITHMETIC ::= ADD | SUBTRACT | MULTIPLY | DIVIDE
-//    COMPARISON ::= EQ | NE | LT | GT | LE | GE
-// //////////////////////////////////////////////////////
-// Note: [] indicate the arguemtn is optional in EBNF
-
-///////////////////////////////////////////////////////////////
-
+/////////////////////////////////////////// PARSER ////////////////////////////////////////////
 
 // PAP matches (head::rest) input if pred p = true
 // Outputs its input unchanged
@@ -98,9 +76,18 @@ let (|TOK|_|) pred =
     | _ -> None
 
 
+// and Ex =
+//     | Single of Ast
+//     | Literal of Literal
+//     | Variable of Identifier
+//     | Arithmetic of Ex * Arithmetic * Ex
+//     | Comparison of Ex * Comparison * Ex
 
-let rec (|PEXP|_|) (headIndex, lst): Option<AstT3 * Token list * int>  =
+let rec (|PEXP|_|) (headIndex, lst): Option<Ast * Token list * int>  =
     match (headIndex, lst) with
+
+
+    
     | PROUNDBRA(roundAst, rest, restIndex) -> 
         match (restIndex, rest) with
         | PSQUAREBRA (sqAst, rest', restIndex') -> Some(BOTHBRAEXP(roundAst, sqAst), rest', restIndex')
