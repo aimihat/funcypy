@@ -1,24 +1,40 @@
 module Tokeniser
 
+open System
+
 type Token = 
-    | ID of string
-    | INT of int
-    | HAT
-    | PLUS
-    | MINUS
+    | LRB               // left round bracket
+    | RRB               // right round bracket
+    | LSB               // left square bracket
+    | RSB               // right square bracket
+    | DOT               // DOT expression (this is where i guess we will build on)
+    | Other of string
 
-let regex s = System.Text.RegularExpressions.Regex(s)
+// type Token = 
+//     | ID of string
+//     | INT of int
+//     | HAT
+//     | PLUS
+//     | MINUS
 
-let tokenR = regex @"((?<token>(\d+|\w+|\^|\+|-))\s*)*"
+let tokenise (str: string) : (Token list) =
+    let rec recTokenise lst =
+        match lst with
+        | [] -> []
+        | hd::tl when hd = '(' -> [LRB] @ recTokenise tl
+        | hd::tl when hd = ')' -> [RRB] @ recTokenise tl
+        | hd::tl when hd = '[' -> [LSB] @ recTokenise tl
+        | hd::tl when hd = ']' -> [RSB] @ recTokenise tl
+        | hd::tl when hd = '.' -> [DOT] @ recTokenise tl
+        | _ ->
+            let rec extractOther acc lst =
+                match lst with
+                | hd::tl when not <| List.contains hd ['(';')';'[';']';'.'] -> 
+                    extractOther (acc @ [hd]) tl
+                | _ -> acc, lst
 
-// val tokenize : s:string -> Token list
-let tokenise (s : string) = 
-    [for x in tokenR.Match(s).Groups.["token"].Captures do
-        let token = 
-            match x.Value with
-            | "^" -> HAT
-            | "-" -> MINUS
-            | "+" -> PLUS
-            | s when System.Char.IsDigit s.[0] -> INT (int s)
-            | s -> ID s
-        yield token]
+            let acc, tl = extractOther [] lst
+            [Other (String.Concat(acc))] @ recTokenise tl
+    Seq.toList str |> recTokenise
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
