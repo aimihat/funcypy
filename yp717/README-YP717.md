@@ -27,3 +27,22 @@ To create correct individual code skeleton:
 * change `program.fs code as you wish
 * delete the contents of this readme, the renamed version will be your individual statement for individual code submission.
 * check that you understand all the files (`login.fsproj`, `Program.fs`, `YourModule.fs`) that make up this F# project and how it runs.
+
+## EXTENDED BNF
+////////////////////// TOP LEVEL ////////////////////
+ROUNDBRA ::= "(" EXPRESSION ")"
+SQBRA ::= "[" EXPRESSION "]"
+EXPRESSION ::= !!!!SINGLE!!!! | LITERAL | VARIABLE | ARITHMETIC | COMPARISON
+SINGLE ::= STATEMENT | FUNCTION | CONDITIONAL | EXPRESSION
+FUNCTION ::= [ IDENTIFIER ] * IDENTIFIER * AST
+CONDITIONAL ::= EXPRESSION * SINGLE * [ SINGLE ]
+CALL ::= SINGLE * SINGLE
+TUPLE ::= LITERAL * LITERAL
+//////////////////// BOTTOM LEVEL ////////////////////
+   IDENTIFIER ::= STRING
+   VARIABLE   ::= IDENTIFIER
+   LITERAL    ::= BOOL | INT | DOUBLE | STRING | TUPLE
+   ARITHMETIC ::= ADD | SUBTRACT | MULTIPLY | DIVIDE
+   COMPARISON ::= EQ | NE | LT | GT | LE | GE
+//////////////////////////////////////////////////////
+Note: [] indicate the arguemtn is optional in EBNF
