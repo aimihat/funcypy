@@ -1,48 +1,44 @@
 module Combinator_runtime
 
-//open Helper
-
-type Value =
-    | Bool of bool
-    | Int of int
-    | Double of double
-    | String of string
-    | Tuple of Value * Value
-    | List of Value * Value
-
-type Identifier = string
-
-type Ast =
-    | Lambda of Identifier * Ast
-    | FuncApp of Ast * Ast
-    | Variable of Identifier
-    | Combinator of CombinatorType
-
-and CombinatorType =
-    | K
-    | I
-    | S
+open System
+open System.Linq.Expressions
+open Helper
 
 // All you do is repeatedly evaluate combinators & built-in operators according to rules,
 // till you end up with a result you can't evaluate further
 
-let rec Abstract (Tree: Ast) (v: Ast): Ast = // Abstract v from Tree
+let rec printTree tree =
+    // Recursively prints an AST tree
+    match tree with
+    | Call(E1, E2) -> sprintf "(%s %s)" <| printTree E1 <| printTree E2
+    | Function(None, BV, E) -> sprintf "(λ%s.%s)" <| BV <| printTree E
+    | Function(Some name, BV, E) ->
+        sprintf "(%s:%s.%s)" <| name <| BV <| printTree E
+    | Expression(Variable x) -> x
+    | Expression(Arithmetic(E1, op, E2)) ->
+        sprintf "(%A %s %s)" <| op <| printTree (Expression E1) <| printTree (Expression E2)
+    | Expression(Literal x) -> sprintf "%A" <| x
+    | Combinator x -> sprintf "%A" <| x
+    | Expression(Single x) -> printTree x
+
+let rec Abstract (tree: Ast) (v: Identifier): Ast = // Abstract v from Tree
     // This assumes curried application, might need to convert from Yannis AST
-    match Tree with
-    | FuncApp(E1, E2) -> FuncApp(FuncApp(Combinator S, Abstract E1 v), Abstract E2 v)
-    | Lambda(BV, E) when Variable BV = v -> Abstract E v
-    | Lambda(BV, E) -> Lambda(BV, Abstract E v)
-    | Combinator x -> FuncApp(Combinator K, Combinator x) // clarify if this and below is right
-    | E when E = v -> Combinator I
+    match tree with
+    | Call(E1, E2) -> Call(Call(Combinator S, Abstract E1 v), Abstract E2 v)
+    | Function(None, BV, E) when BV = v -> Abstract E v
+    | Function(None, BV, E) -> Function(None, BV, Abstract E v)
+    | Combinator x -> Call(Combinator K, Combinator x) // clarify if this and below is right
+    | Expression (Variable E) when E = v -> Combinator I
     | E -> E
 
-let AbstractArgs (Tree: Ast) (args: Ast list) =
-    List.fold (fun t arg -> Abstract t arg) Tree args
+let AbstractArgs (tree: Ast) (args: Identifier list) =
+    List.fold (fun t arg -> Abstract t arg) tree args
     
-
+// TODO: think how to handle assignments in ast
 // TODO: add more combinators, for better efficiency (hopefully, have time)
 // TODO: recursive
 // TODO: memoise
+
 (*TODO:
 Q10. The makeHeap function reads an expression into heap.
 It accepts an environment which contains all previously
@@ -61,39 +57,71 @@ Show that it works by hand reduction of one loop. Prove that it works.
 //The usual (and best) order is Normal order where the function (left) side of a function application
 //is evaluated as much as possible before the function parameters
 
-let CombFunction x =
-    match x with
-    | K -> (fun x y -> x)
-    | I -> (fun x -> x)
-    | S -> (fun f g x -> (f x) (g x))
-
-let rec Substitute BV By In =
+(*
+let rec Substitute (bv: Identifier) (by: Ast) (expr: Ast) =
     // Graph search, substituting `Variable BV` by `By`
-    match In with
-    | FuncApp(E1, E2) -> FuncApp(Substitute BV By E1, Substitute BV By E2)
-    | Lambda(BV2, E) when BV = BV2 -> Lambda(BV2, E) // Overriden scope
-    | Lambda(BV2, E) -> Lambda(BV2, Substitute BV By E) // Overriden scope
-    | Variable x when BV = x -> By
+    match expr with
+    | Call(E1, E2) -> Call(Substitute bv by E1, Substitute bv by E2)
+    | Function(name, arg, E) when bv = arg -> Function(name, arg, E) // Overriden scope
+    | Function(name, arg, E) -> Function(name, arg, Substitute bv by E) // Overriden scope
+    | Expression(Variable x) when bv = x -> by
+    //TODO: | Conditional(Variable x, br_then, Some br_else) -> Conditional(by, br_then, Some br_else)
+    //TODO: handle other Ast cases
     | E -> E
+*)
+    
+let (|GetINT|_|) lit =
+    match lit with
+    | Expression (Literal (Int x)) -> Some x
+    | _ -> None
 
-let rec EvalTree (Node: Ast) = // β-reduction
-    match Node with
-    | Lambda (BV, E) -> Lambda (BV, EvalTree E)
-    | FuncApp (Lambda (BV, E1), E2) -> EvalTree (Substitute BV E2 E1) // how to handle built-in operators
-    | E -> E //matches built-in operators and literals
+let rec EvalTree (node: Ast) = // β-reduction
+    let EvalExpr (expr: Ex) = EvalTree (Expression expr)
+   
+    let (|ArithmeticOp|_|) node =
+        let (|TemplateOp|_|) op op_fn node =
+            match node with
+            | Expression (Arithmetic (expr1, op, expr2)) ->
+                let E1, E2 = EvalExpr expr1, EvalExpr expr2
+                match (E1, E2) with 
+                | GetINT i1, GetINT i2
+                    -> Some <| Expression (Literal (Int (op_fn i1 i2))) // if both are literals, evaluate
+                | _ -> Some <| Expression (Arithmetic (Single E1, op, Single E2)) // otherwise, return maxim. reduced ast
+            | _ -> None
+        
+        let (|Addition|_|) = (|TemplateOp|_|) Add (+)
+        let (|Subtraction|_|) = (|TemplateOp|_|) Subtract (-)
+        let (|Multiplication|_|) = (|TemplateOp|_|) Multiply (*)
+        let (|Division|_|) = (|TemplateOp|_|) Divide (/)
+        
+        match node with
+        | Addition result -> Some result
+        | Subtraction result -> Some result
+        | Multiplication result -> Some result
+        | Division result -> Some result
+        | _ -> None
+        
+    let (|CombinatorOp|_|) node =
+         match node with
+            | Combinator X ->
+                match X with
+                | I -> Some <| Function(None, "a", Expression(Variable "a"))
+                | K -> Some <| Function(None, "a", Expression(Variable "a"))
+                | S -> Some <| Function(None, "a", Expression(Variable "a"))
+            | _ -> None
+                
+    match node with
+    | Function(name, bv, expr) -> Function(name, bv, EvalTree expr)
+    | Call(expr1, expr2) -> EvalTree (Substitute bv expr2 expr1)
+    //TODO: handle call with identifier instead of actual function (e.g. function previously assigned)
+    | ArithmeticOp result | CombinatorOp result -> result
+    //TODO: add missing + all Exp
+    //| E -> E //matches built-in operators and literals
     
-let rec printCombExpr Tree =
-    match Tree with
-    | FuncApp(E1, E2) -> sprintf "(%s %s)" <| printCombExpr E1 <| printCombExpr E2
-    | Lambda(BV, E) -> sprintf "(λ%s.%s)" <| BV <| printCombExpr E
-    | Combinator x -> sprintf "%A" <| x
-    | Variable x -> x
-    
-let InputAst = FuncApp(Lambda("g", Combinator I), Variable "f")
-let AbstractVars = [Variable "g"; Variable "f"]
-sprintf "%A" <| EvalTree (FuncApp(Lambda("x", Variable "x"), Variable "y"))
+let InputAst = Call(Function(None, "g", Combinator I), Expression (Variable "f"))
+let AbstractVars = ["g"; "f"]
 
-    
+printTree <| EvalTree (AbstractArgs InputAst AbstractVars)    
 
 let Interpreter(Tree: Ast): Result<'a, string> =
     Tree
