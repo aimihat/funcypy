@@ -2,3 +2,4 @@ Interpreter/.idea/
 .idea/
 bin/
 obj/
+.DS_Store
