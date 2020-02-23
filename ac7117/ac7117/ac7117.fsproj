@@ -13,8 +13,11 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Expecto" Version="8.13.1" />
+      <PackageReference Include="Expecto.BenchmarkDotNet" Version="8.13.1" />
       <PackageReference Include="Expecto.FsCheck" Version="8.13.1" />
-      <PackageReference Include="FsCheck" Version="3.0.0-alpha4" />
+      <PackageReference Include="Expecto.Hopac" Version="8.13.1" />
+      <PackageReference Include="FsCheck" Version="2.14.0" />
     </ItemGroup>
 
 </Project>

@@ -5,7 +5,7 @@ type Comparison = Eq | Ne | Lt | Gt | Le | Ge
 type Identifier = string
 
 type Value =
-    //| Bool of bool
+    | Bool of bool
     | Int of int
     //| Double of double
     //| String of string
@@ -17,7 +17,7 @@ type Ast =
     | Expression of Ex
     | Function of Identifier option * Identifier * Ast
     //| Scope of Ast list option
-    //| Conditional of Ex * Ast * Ast option
+    | Conditional of Ex * Ast * Ast
     | Call of Ast * Ast
     //| Assign of Identifier * Ex
     | Combinator of CombinatorType
@@ -26,5 +26,5 @@ and Ex =
     | Literal of Value
     | Variable of Identifier
     | Arithmetic of Ex * Arithmetic * Ex
-    //| Comparison of Ex * Comparison * Ex
+    | Comparison of Ex * Comparison * Ex
 and CombinatorType = | K | I | S
