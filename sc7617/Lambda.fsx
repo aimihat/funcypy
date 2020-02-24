@@ -16,63 +16,64 @@ let printPipe x = printf "%A \n" x ; x
 type Arithmetic = Add | Subtract | Multiply | Divide
 type Comparison = Eq | Ne | Lt | Gt | Le | Ge
 type Identifier = 
-    | IdString of string 
-    | IdChar of char/// shall we replace this just by string???
- 
+    | IdString of string
+    | IdChar of char
+
 type Value =
     | Bool of bool
     | Int of int
     | Double of double
     | String of string
-    | Char of char
     | Tuple of Value*Value
-    //| List of Value*Tuple
- 
+
 type Ast =    
     | Statement of Ast    
     | Expression of Ex    
-    | Function of string option * Argument list option * Ast
-    | Scope of Ast list option
+    | Function of Identifier option * Identifier * Ast
+    | FunctionDef of Identifier * Identifier * Ast
+
+    // | Scope of Ast list option
     | Conditional of Ex * Ast * Ast option
-    | Call of Identifier * Argument list option
-    | Assign of Identifier * Ex
-
-
+    | Call of Ast * Ast
+    // | Assign of Identifier * Ex
+    | Combinator of CombinatorType
 and Ex =
     | Single of Ast
     | Literal of Value
     | Variable of Identifier
     | Arithmetic of Ex * Arithmetic * Ex
     | Comparison of Ex * Comparison * Ex
+and CombinatorType = 
+    | K 
+    | I 
+    | S
+
+// and LambdaType = 
+// //  Funcion (None, Identifier (String x), Ast) -> LambdaT (Identifier, Ast)
+//     | LambdaEx of Ex
+//     | LambdaT of Identifier * Ast
+//     | ClosureT of Identifier * LambdaType
+//     | ApplicationT of LambdaType * LambdaType
 
 
-and Argument =
-    | Element of Ex
+    
 
-and LambdaTerm =
-  | ExT of Ex
-  | LambdaT of char*LambdaTerm
-  | ClosureT of char*LambdaTerm*Env
+type LambdaTerm =
+  | VariableT of string
+  | LambdaT of string*LambdaTerm
+  | ClosureT of string*LambdaTerm*Env
   | ApplicationT of LambdaTerm*LambdaTerm
 
 and Env = (char*LambdaTerm) list    
 
 
-let (|EXPT|_|) = 
-    let innerFn inp = 
-        match inp with
-        | ExT (Variable (IdChar name)) -> Some name
-        | _ -> failwith "Failed to match"
-
-    innerFn
 
 
 
-// Suppose I am give the input as "LambdaT "a" 'a'"" which is equivalent to //a.a where // means lambda
 
 let rec evalInEnv (env: Env) (term: LambdaTerm): LambdaTerm =
   match term with
-    | EXPT name ->
+    | VariableT name ->
       match List.tryFind (fun (aName, term) -> aName = name) env with
         | Some (_, term) -> term
         | None -> failwith "Couldn't find a term by name"
@@ -110,7 +111,7 @@ let eval (term: LambdaTerm): LambdaTerm =
 
 let rec pretty (term: LambdaTerm): char list =
   match term with
-    | EXPT name -> [name]
+    | VariableT name -> [name]
     | LambdaT (arg, body) -> ['\\'; arg; '.'] @ pretty body
     | ClosureT (arg, body, _) -> ['\\'; arg; '.'] @ pretty body
     | ApplicationT (fn, value) -> ['('] @ pretty fn @ [' '] @ pretty value @ [')']
@@ -133,7 +134,7 @@ let interpString: LambdaTerm -> string =
 
 // Input 1
 
-let inp1 = LambdaT ('a', (ExT (Variable (IdChar 'a'))))
+let inp1 = ApplicationT (LambdaT ('a', VariableT 'a'), LambdaT ('c', ApplicationT (VariableT 'c' , VariableT 'c')))
 
 print <| interpString inp1
 

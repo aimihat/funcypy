@@ -7,5 +7,8 @@
     <Compile Include="Program.fs" />
     <Compile Include="Lambda.fsx" />
     <Compile Include="Tests.fsx" />
+    <Compile Include="gillilandImpl.fsx" />
+    <Compile Include="TestArith.fsx" />
+    <Compile Include="MyLambda.fsx" />
   </ItemGroup>
 </Project>
