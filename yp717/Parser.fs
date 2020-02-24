@@ -1,184 +1,290 @@
 module Parser
 
 open Common
-open Tokeniser
+// open Tokeniser
 
 // The Parser code takes a list of tokens and turns this into a parse tree which can easily be evaluated.
 // The process is complicated because it must cope with function application
 
+// Given Examples
+// builtinPlus a b -> FuncApp(FuncApp(builtinPlus, a), b)
+// a + b -> FuncApp(FuncApp(builtinPlus, a), b)
+// a * b -> FuncApp(FuncApp(builtinTimes, a), b)
+// (a+b)*c) -> FuncApp(FuncApp(builtinTimes, FuncApp(FuncApp(builtinPlus,a),b)),c)
+
 let print x = printfn "%A" x
-exception TokenException of int * string
  
-//////////////////////////////////////// AST DEFINITION ///////////////////////////////////////
-type Arithmetic = Add | Subtract | Multiply | Divide
-type Comparison = Eq | Ne | Lt | Gt | Le | Ge
-type Identifier = string
-
-type Literal =
-    | Bool of bool
-    | Int of int
-    | Double of double
-    | String of string
-    | Tuple of Literal*Literal
-
-type Ast =    
-    | Statement of Ast    
-    | Expression of Ex    
-    | Function of Identifier option * Identifier * Ast
-    // | Scope of Ast list option
-    | Conditional of Ex * Ast * Ast option
-    | Call of Ast * Ast
-    // | Assign of Identifier * Ex
-    | Combinator of CombinatorType
-and Ex =
-    | Single of Ast
-    | Literal of Literal
-    | Variable of Identifier
-    | Arithmetic of Ex * Arithmetic * Ex
-    | Comparison of Ex * Comparison * Ex
-and CombinatorType = 
-    | K 
-    | I 
-    | S
-
-///////////////////////////////////// TOKEN PREPROCESSING /////////////////////////////////////
-// Generic function that checks if token is specific operator token in list
-let isSpecTokenInList (lst: string list) =
-    function
-    | TokSpec op -> List.contains op lst
-    | _ -> false
-
-// Checks if token is a literal value
-let isLiteralTok t = 
-    match t with
-    | TokBoolLit _ | TokIntLit _ | TokFloatLit _ | TokStrLit _ -> true
-    | _ -> false
-
-// Checks if token is a Binary operator
-let isBinaryTok = isSpecTokenInList binaryOps
-
-// Checks if token is Arithmetic operator
-let isArithmeticTok = isSpecTokenInList arithmeticOps
-
-// token is a unary operator   
-let isUnaryTok = isSpecTokenInList unaryOps
-
-// Checks if token is Comparison operator
-let isComparisonTok = isSpecTokenInList comparisonOps
+ // these types and tokens should be moved to common module
+//////////////////////////////////////// AST DEFINITION ///////////////////////////////////////   
+type Ast =
+    | Const of Literal
+    | Var of Identifier
+    | FuncApp of Ast * Ast
+    | BuiltInFunc of Arithmetic
 
 /////////////////////////////////////////// PARSER ////////////////////////////////////////////
 
-// PAP matches (head::rest) input if pred p = true
-// Outputs its input unchanged
-let (|TOK|_|) pred = 
-    function 
-    | head :: rest when pred head -> Some(head :: rest)
-    | _ -> None
+// Single Case D.U. used as a wrapper to create a type
+type Parser<'T> = P of (list<Token> -> int -> Option<'T * int>)
 
+// Basic building block *pToken*: Takes in a token list and a position in the token list index *i*
+// Returns either Some tuple of the token at *i* and the incremented *i* or None
+let pToken : Parser<Token> =
+    P <| fun tokenList i ->
+        if i < tokenList.Length then
+            Some (tokenList.[i], i+1)
+        else
+            None
 
-// and Ex =
-//     | Single of Ast
-//     | Literal of Literal
-//     | Variable of Identifier
-//     | Arithmetic of Ex * Arithmetic * Ex
-//     | Comparison of Ex * Comparison * Ex
+// Helper function: Helps to run *aParser* easily
+let pRun (P aParser) tok = aParser tok 0
 
-let rec (|PEXP|_|) (headIndex, lst): Option<Ast * Token list * int>  =
-    match (headIndex, lst) with
+// Takes a *Token* and always returns Some tuple of *Token* and an unaltered index *i*
+// More generic types used to parse specific Token Types
+let pReturn tok : Parser<'T> = 
+    P <| fun t i -> Some(tok, i)
 
+// Takes unit and always returns None
+let pFail () : Parser<'T> = 
+    P <| fun t i -> None
 
-    
-    | PROUNDBRA(roundAst, rest, restIndex) -> 
-        match (restIndex, rest) with
-        | PSQUAREBRA (sqAst, rest', restIndex') -> Some(BOTHBRAEXP(roundAst, sqAst), rest', restIndex')
-        | PROUNDBRA(_) -> raise(TokenException(restIndex, "Invalid token found"))
-        | _ -> Some(roundAst, rest, restIndex)
-    | PSQUAREBRA(ast, rest, restIndex) -> Some(ast, rest, restIndex)
-    | (_, (DOT::tl)) -> Some(DOTEXP, tl, headIndex + 1)
-    | _  -> None
-       
-and (|PROUNDBRA|_|) (headIndex, tokenList): Option<AstT3 * Token list * int>  = 
-    match (LRB, tokenList) with
-    | PTOKEN(rest) -> 
-        let nextIndex = headIndex + 1
-        match (nextIndex, rest) with
-        | PEXP(ast, tail, tailIndex) ->
-            match (RRB, tail) with
-            | PTOKEN(rest') -> Some(ROUNDBRAEXP(ast), rest', tailIndex + 1)
-            | _ -> None
-        | _ -> None
-    | _ -> None
+// Following standard functional pattern, takes output of one parser and feeds it
+// as input to another parser. This allows the chaining of parsers together.
+// *ufunc* is a function that takes a type T and returns a parser of some type U
+// *tparser* is a parser of the same type U
+let pBind (ufunc : 'T -> Parser<'U>) (P tparser) : Parser<'U> =
+    P <| fun tokenList i ->
+        match tparser tokenList i with
+        | None -> None
+        | Some (tvalue, newI) ->
+            let (P uparser) = ufunc tvalue
+            uparser tokenList newI 
 
-and (|PSQUAREBRA|_|) (headIndex, tokenList): Option<AstT3 * Token list * int> =
-    match (LSB, tokenList) with
-    | PTOKEN(rest) -> 
-        let nextIndex = headIndex + 1
-        match (nextIndex, rest) with
-        | PEXP(ast, tail, tailIndex) ->
-            match (RSB, tail) with
-            | PTOKEN(rest') -> Some(SQBRAEXP(ast), rest', tailIndex + 1)
-            | _ -> None
-        | _ -> None
-    | _ -> None
-        
-type ParseResult = Result<AstT3, int * string>
+// Given two parsers *uParser* and *tParser* combine them using *pbind* as follows:
+// Combines two parsers together
+let pCombine (uParser : Parser<'U>) (tParser : Parser<'T>) : Parser<'U> = 
+    tParser |> pBind (fun _ -> uParser)
 
-// returns either the AST or
-// Error indicating token number which did not parse and error message 
-let parseT3 (tokL: Token list) : ParseResult =
-    try 
-        match (0, tokL) with
-        | PEXP(ast, list, _) when List.isEmpty list -> Ok(ast) 
-        | _ -> Error(0, "Invalid token found")
-    with
-    | TokenException(index, reason) -> Error(index, reason)
+// Applies two parsers and only keeps result of right parser
+let pKeepRight uParser tParser = 
+    pCombine uParser tParser
 
+// Applies two parsers and only keeps result of left parser
+let pKeepLeft (uParser : Parser<'U>) (tParser : Parser<'T>) : Parser<'T> = 
+  tParser |> pBind (fun tokenValue -> uParser |> pBind (fun _ -> pReturn tokenValue))
 
-// type Term = 
-//     | Term of int * string * int
-//     | Const of int
+// Takes a parser of a list of *tparser* and returns Some tuple of values
+// and the index *i* at which the parser fails (if it does!)
+// Can be used to parse sequences of tokens
+let pMany (P t) : Parser<'T list> =
+    P <| fun tokL pos ->
+        // define a tail recursive "loop" in a functional way
+        let rec loop vs currentPos = 
+            match t tokL currentPos with
+            | None -> Some (List.rev vs, currentPos)
+            | Some (tvalue, tpos) -> loop (tvalue::vs) tpos
+        loop [] pos // call the loop
 
-// type Polynomial = Term list
-// type TokenStream = Token list
+// Similar to pMany but requires parsing success at least once
+let pChainlMin1 (term : Parser<'T>) (sep : Parser<'T -> 'T -> 'T>) : Parser<'T> =
+    let (P termfun) = term
+    let (P sepfun) = sep
+    P <| fun tok i ->
+        let rec loop aggr currentI =
+            match sepfun tok currentI with
+            | None -> Some (aggr, currentI)
+            | Some (sepCombiner, sepI) ->
+                match termfun tok sepI with
+                | None -> None
+                | Some (termValue, termI) -> loop (sepCombiner aggr termValue) termI
+        match termfun tok i with
+        | None -> None
+        | Some (termValue, termI) -> loop termValue termI
 
-// let tryToken (src: TokenStream) =
-//     match src with 
-//     | tok :: rest -> Some(tok, rest)
-//     | _ -> None
+// F# Computation expression: makes it easier to build more complex parsers
+// Standard FP pattern using earlier defined building block functions
+type ParserBuilder () =
+    class 
+        // Enables let!
+        member x.Bind (t, uf) = pBind uf t
+        // Enables do!
+        member x.Combine (t, u) = pCombine u t
+        // Enables return
+        member x.Return v = pReturn v
+        // Enables return
+        member x.ReturnFrom p = p : Parser<'T>
+        // allows if x then expr with no else
+        member x.Zero () = pReturn ()
+    end
 
-// let parseIndex src = 
-//     match tryToken src with
-//     | Some (HAT, src) ->
-//         match tryToken src with
-//         | Some (INT num2, src) ->
-//             num2, src
-//         | _ -> failwith "expected an integer after '^'"
-//     | _ -> 1, src
+let parser = ParserBuilder ()
+  
+// Token -> bool; token type checking functions
+let isLiteral (tok:Token) = 
+    match tok with
+    | TokLit _ -> true
+    | _ -> false
 
-// let parseTerm src = 
-//     match tryToken src with
-//     | Some (INT num, src) ->
-//         match tryToken src with
-//         | Some (ID id, src) ->
-//             let idx, src = parseIndex src
-//             Term (num, id, idx), src
-//         | _ -> Const num, src
-//     | Some (ID id, src) ->
-//         let idx, src = parseIndex src
-//         Term(1, id, idx), src
-//     | _ -> failwith "end of token stream in term"
+let isUnaryOp (tok:Token) =
+    match tok with
+    | TokUnaryOp _ -> true
+    | _ -> false
 
-// let rec parsePolynomial src = 
-//     let t1, src = parseTerm src
-//     match tryToken src with
-//     | Some (PLUS, src) ->
-//         let p2, src = parsePolynomial src
-//         (t1 :: p2), src
-//     | _ -> [t1], src
+let isBinaryOp (tok:Token) =
+    match tok with
+    | TokBinOp _ -> true
+    | _ -> false
 
-// let parse input = 
-//     let src = tokenise input
-//     let result, src = parsePolynomial src
-//     match tryToken src with
-//     | Some _ -> failwithf "unexpected input at end of token stream!"
-//     | None -> result
+let isStartOp (tok:Token) = 
+    match tok with
+    | TokStartOp _ -> true
+    | _ -> false
+
+let isEndOp (tok:Token) = 
+    match tok with 
+    | TokEndOp _ -> true
+    | _ -> false
+
+let isIdentifier (tok:Token) =
+    match tok with
+    | TokIdentifier _ -> true
+    | _ -> false
+
+let isComparisonOp (tok:Token) =
+    match tok with
+    | TokComparisonOp _ -> true
+    | _ -> false
+
+let isArithmeticOp (tok:Token) =
+    match tok with
+    | TokArithmeticOp _ -> true
+    | _ -> false
+
+// Token -> bool; token type checking functions
+let getLiteral (tok:Token) = 
+    match tok with
+    | TokLit (Bool x) -> (Bool x)
+    | TokLit (Int x) -> (Int x)
+    | TokLit (Double x) -> (Double x)
+    | TokLit (String x) -> (String x)
+    | TokLit (Tuple (x, y)) -> (Tuple (x, y))
+    | _ -> failwith "Did not get a literal" 
+
+let getIdentifier (tok:Token) =
+    match tok with
+    | TokIdentifier str -> str
+    | _ -> failwith "Did not get an identifier" 
+
+let getArithmOperator (tok:Token) =
+    match tok with 
+    | TokArithmeticOp op -> op
+    | _ -> failwith "Did not get an arithmetic operator"
+
+////////////////////////////////////////// everything up to hear is working for tokens 
+// More generic than pLiteral is pSatisfy
+let pSatisfy (satisfy : Token -> bool) : Parser<Token> = 
+    parser {
+        let! tok = pToken
+        if satisfy tok then
+            return tok
+        else return! pFail ()
+    }
+
+let pLiteral = pSatisfy isLiteral
+let pUnaryOp = pSatisfy isUnaryOp
+let pBinOp = pSatisfy isBinaryOp
+let pStartOp = pSatisfy isStartOp
+let pEndOp = pSatisfy isEndOp
+let pIdent = pSatisfy isIdentifier
+let pCompOp = pSatisfy isComparisonOp
+let pArithmOp = pSatisfy isArithmeticOp
+// could easily add whitespace here
+
+// TODO: is variable name tokenType or should it be tokenValue
+// Takes a mapping function that maps a type T to type U and a parser of T
+let pMap mappingFunc tParser =
+    parser {
+        let! tokenType = tParser
+        return mappingFunc tokenType
+    }
+
+// Combines two parsers into a Parser of a Pair
+let pPair uParser tParser =
+    parser {
+        let! first = tParser
+        let! second = uParser
+        return first, second
+    }
+
+// Combines two parsers such that if uParser fails it tries tParser
+let pOrElse (P uParser) (P tParser) =
+    P <| fun str pos ->
+        match tParser str pos with
+        | None -> uParser str pos
+        | Some (tvalue, tpos) -> Some (tvalue, tpos)
+
+// Define combinators: using static member to attach methods specifically to Parser type
+// *member* keyword shows that this is a member function (i.e. a method)
+// Technically OOP approach but cleaner and combinators only needed specifically for Parsers here
+// After this we can express parsers using combinators to make things even more readable!
+type Parser<'T> with
+    static member (>>=) (t, uf) = pBind uf t
+    static member (>>.) (t, u) = pKeepRight u t
+    static member (.>>) (t, u) = pKeepLeft u t
+    static member (.>>.) (t, u) = pPair u t
+    static member (|>>) (t, m) = pMap m t
+    static member (<|>) (t, u) = pOrElse u t
+
+// Similar to pMany but requires 1 or more 'T instead of 0 or more
+let pManyMin1 tparser = 
+    parser {
+        let! head = tparser
+        let! tail = pMany tparser
+        return head::tail
+    }
+
+// Skips a specific token given as input
+let pSkipToken tok =
+    parser {
+        let! token = pToken
+        if tok = token then   
+            return ()
+        else
+            return! pFail ()
+    }
+
+// not ready to handle equals yet
+
+// a + b -> FuncApp(FuncApp(builtinPlus, a), b)
+// current objective 
+let x a b = 
+    FuncApp (FuncApp ((BuiltInFunc ADD), a), b)
+
+let pConst = pLiteral |>> getLiteral |>> Const
+let pVariable = pIdent |>> getIdentifier |>> Var
+
+let pBuiltInFunc = pArithmOp |>> getArithmOperator |>> BuiltInFunc
+
+let pTerm = pConst <|> pVariable
+
+// pOp
+let pOp opTok operator = 
+    pSkipToken opTok 
+    |>> fun c -> 
+        fun leftTree rightTree -> 
+            FuncApp (FuncApp ((BuiltInFunc operator), leftTree), rightTree)
+
+let pAdd = pOp (TokArithmeticOp ADD) ADD
+let pSubtract = pOp (TokArithmeticOp SUBTRACT) SUBTRACT
+let pMultiply = pOp (TokArithmeticOp MULTIPLY) MULTIPLY
+let pDivide = pOp (TokArithmeticOp DIVIDE) DIVIDE
+
+let pAllOp = pAdd <|> pSubtract <|> pMultiply <|> pDivide
+
+let pmultiOrDivide = pMultiply <|> pDivide
+let paddOrSubtract = pAdd <|> pSubtract
+
+let pchainMultiDivide = pChainlMin1 pTerm pmultiOrDivide
+let pchainAddSubtract = pChainlMin1 pchainMultiDivide paddOrSubtract
+
+let pAST = pchainAddSubtract

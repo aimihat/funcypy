@@ -1,6 +1,7 @@
 ﻿open System
 // open Tokeniser
-open Tokeniser
+open Common
+open Parser
 
 // mock parser example from Don Syme
 let src1 = "2x^2+3x+5"
@@ -9,18 +10,27 @@ let print x = printfn "%A" x
 
 [<EntryPoint>]
 let main(argv) =
-    // let tokenResult = tokenise src1    
-    // print <| tokenResult
+    // builtinPlus a b -> FuncApp(FuncApp(builtinPlus, a), b)
+    let inp1 = [TokLit (Int 5); TokArithmeticOp ADD; TokLit (Int 10)]
+    let inp2 = [TokLit (Int 5)]
+    let inp3 = [TokArithmeticOp ADD]
+    let inp4 = []    
+    let inp5 = [TokLit (Double 5.5); TokLit (String "hi"); TokLit (Int 10)]    
+    // This is what simple function application should look like for two arguments
 
-    let tokenResult = tokenise "([.])"
-    print <| "Result is: "
-    print <| tokenResult
+    let p = 
+        parser {
+            let! first = pToken
+            let! second = pToken
+            let! third = pToken
+            return first, second, third
+        }
 
-    // let parseResult0 = parse src1
-    // print <| parseResult0
+    pRun pLiteral inp5 |> printfn "%A"
 
-    // let parseResult1 = parse src2
-    // print <| parseResult1
+    pRun (pMany pLiteral) inp5 |> printfn "%A"
+
+    pRun (pMany pAST) inp1 |> printfn "%A"
 
     System.Console.ReadKey() |> ignore
     0 // return an integer exit code
