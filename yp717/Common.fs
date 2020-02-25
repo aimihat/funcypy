@@ -5,14 +5,23 @@ module Common
 // TODO: implementation of something for lists
 // TODO: Find some way of representing priority of the operators
 
-type Arithmetic = ADD | SUBTRACT | MULTIPLY | DIVIDE
-type Comparison = EQ | NE | LT | GT | LE | GE
-type BuiltInType = Arithmetic of Arithmetic
+type BuiltInType = 
+    | ADD 
+    | SUBTRACT 
+    | MULTIPLY 
+    | DIVIDE
+    | EQ 
+    | NE 
+    | LT 
+    | GT 
+    | LE 
+    | GE
 
-type Identifier = string
-type StartOps = BEGIN | LRB | IF | FUN | EQUALS
-type EndOps = END | THEN | ELSE | FI | RRB | IN
-type BinaryOps = AND | OR | NOR | XOR
+type Identifier = IDString of string
+type Operator = 
+    | BEGIN | LRB | IF | EQUALS | FUN
+    | END | THEN | ELSE | FI | RRB | IN
+
 type UnaryOps = NOT | NEGATE
 type Literal = 
     | Bool of bool 
@@ -25,12 +34,9 @@ type CombinatorType = | I | S | K
 type Token = 
     | TokLit of Literal
     | TokUnaryOp of UnaryOps
-    | TokBinOp of BinaryOps
-    | TokStartOp of StartOps
-    | TokEndOp of EndOps
+    | TokSpecOp of Operator
     | TokIdentifier of Identifier
-    | TokComparisonOp of Comparison
-    | TokArithmeticOp of Arithmetic
+    | TokBuiltInOp of BuiltInType
     // | TokNull
 ////////////////////////////////////// OPERATOR DEFINITION //////////////////////////////////////
 

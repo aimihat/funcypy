@@ -3,9 +3,6 @@ module Parser
 open Common
 // open Tokeniser
 
-// The Parser code takes a list of tokens and turns this into a parse tree which can easily be evaluated.
-// The process is complicated because it must cope with function application
-
 // Given Examples
 // builtinPlus a b -> FuncApp(FuncApp(builtinPlus, a), b)
 // a + b -> FuncApp(FuncApp(builtinPlus, a), b)
@@ -20,8 +17,9 @@ type Ast =
     | Const of Literal
     | Var of Identifier
     | FuncApp of Ast * Ast
-    | BuiltInFunc of Arithmetic
-
+    | BuiltInFunc of BuiltInType
+    | FuncDefExp of Identifier * Ast * Ast
+    | Conditional of Ast * Ast * Ast 
 /////////////////////////////////////////// PARSER ////////////////////////////////////////////
 
 // Single Case D.U. used as a wrapper to create a type
@@ -37,7 +35,7 @@ let pToken : Parser<Token> =
             None
 
 // Helper function: Helps to run *aParser* easily
-let pRun (P aParser) tok = aParser tok 0
+let pRun (P aParser) tokL = aParser tokL 0
 
 // Takes a *Token* and always returns Some tuple of *Token* and an unaltered index *i*
 // More generic types used to parse specific Token Types
@@ -86,6 +84,8 @@ let pMany (P t) : Parser<'T list> =
         loop [] pos // call the loop
 
 // Similar to pMany but requires parsing success at least once
+// Note this is left associative
+// loop is tail recursive so optimised for F#
 let pChainlMin1 (term : Parser<'T>) (sep : Parser<'T -> 'T -> 'T>) : Parser<'T> =
     let (P termfun) = term
     let (P sepfun) = sep
@@ -111,7 +111,7 @@ type ParserBuilder () =
         member x.Combine (t, u) = pCombine u t
         // Enables return
         member x.Return v = pReturn v
-        // Enables return
+        // Enables return!
         member x.ReturnFrom p = p : Parser<'T>
         // allows if x then expr with no else
         member x.Zero () = pReturn ()
@@ -119,7 +119,7 @@ type ParserBuilder () =
 
 let parser = ParserBuilder ()
   
-// Token -> bool; token type checking functions
+// Token -> bool; token type checking functions -> also sort of wasteful -> a lot of unpacking
 let isLiteral (tok:Token) = 
     match tok with
     | TokLit _ -> true
@@ -130,19 +130,9 @@ let isUnaryOp (tok:Token) =
     | TokUnaryOp _ -> true
     | _ -> false
 
-let isBinaryOp (tok:Token) =
+let isOperator (tok:Token) = 
     match tok with
-    | TokBinOp _ -> true
-    | _ -> false
-
-let isStartOp (tok:Token) = 
-    match tok with
-    | TokStartOp _ -> true
-    | _ -> false
-
-let isEndOp (tok:Token) = 
-    match tok with 
-    | TokEndOp _ -> true
+    | TokSpecOp _ -> true
     | _ -> false
 
 let isIdentifier (tok:Token) =
@@ -150,38 +140,36 @@ let isIdentifier (tok:Token) =
     | TokIdentifier _ -> true
     | _ -> false
 
-let isComparisonOp (tok:Token) =
+let isBuiltInOp (tok:Token) =
     match tok with
-    | TokComparisonOp _ -> true
+    | TokBuiltInOp _ -> true
     | _ -> false
 
-let isArithmeticOp (tok:Token) =
-    match tok with
-    | TokArithmeticOp _ -> true
-    | _ -> false
-
-// Token -> bool; token type checking functions
+// Token -> bool; token type checking functions -> not a fan...these are very repetitive
 let getLiteral (tok:Token) = 
     match tok with
     | TokLit (Bool x) -> (Bool x)
     | TokLit (Int x) -> (Int x)
     | TokLit (Double x) -> (Double x)
-    | TokLit (String x) -> (String x)
+    // | TokLit (String x) -> (String x)
     | TokLit (Tuple (x, y)) -> (Tuple (x, y))
-    | _ -> failwith "Did not get a literal" 
+    | _ -> failwith "Expected Literal but did not receive literal" 
 
 let getIdentifier (tok:Token) =
     match tok with
     | TokIdentifier str -> str
-    | _ -> failwith "Did not get an identifier" 
+    | _ -> failwith "Expected Identifier but did not receive Identifier" 
 
-let getArithmOperator (tok:Token) =
+let getBuiltInOp (tok:Token) =
     match tok with 
-    | TokArithmeticOp op -> op
-    | _ -> failwith "Did not get an arithmetic operator"
+    | TokBuiltInOp op -> op
+    | _ -> failwith "Expected BuiltInOp but did not receive BuiltInOp"
+   
+let getOperator (tok:Token) =
+    match tok with
+    | TokSpecOp op -> op
+    | _ -> failwith "Expected Operator but did not receive Operator"
 
-////////////////////////////////////////// everything up to hear is working for tokens 
-// More generic than pLiteral is pSatisfy
 let pSatisfy (satisfy : Token -> bool) : Parser<Token> = 
     parser {
         let! tok = pToken
@@ -192,15 +180,11 @@ let pSatisfy (satisfy : Token -> bool) : Parser<Token> =
 
 let pLiteral = pSatisfy isLiteral
 let pUnaryOp = pSatisfy isUnaryOp
-let pBinOp = pSatisfy isBinaryOp
-let pStartOp = pSatisfy isStartOp
-let pEndOp = pSatisfy isEndOp
+let pStartOp = pSatisfy isOperator
 let pIdent = pSatisfy isIdentifier
-let pCompOp = pSatisfy isComparisonOp
-let pArithmOp = pSatisfy isArithmeticOp
+let pIdentifier = pSatisfy isIdentifier
 // could easily add whitespace here
 
-// TODO: is variable name tokenType or should it be tokenValue
 // Takes a mapping function that maps a type T to type U and a parser of T
 let pMap mappingFunc tParser =
     parser {
@@ -253,38 +237,120 @@ let pSkipToken tok =
             return! pFail ()
     }
 
-// not ready to handle equals yet
-
-// a + b -> FuncApp(FuncApp(builtinPlus, a), b)
-// current objective 
-let x a b = 
-    FuncApp (FuncApp ((BuiltInFunc ADD), a), b)
-
 let pConst = pLiteral |>> getLiteral |>> Const
 let pVariable = pIdent |>> getIdentifier |>> Var
-
-let pBuiltInFunc = pArithmOp |>> getArithmOperator |>> BuiltInFunc
-
+let pBuiltInFunc = pSatisfy isBuiltInOp |>> getBuiltInOp |>> BuiltInFunc
 let pTerm = pConst <|> pVariable
 
-// pOp
+// pOp Skips the operator and builds an AST with the operator in the right place
 let pOp opTok operator = 
     pSkipToken opTok 
     |>> fun c -> 
         fun leftTree rightTree -> 
             FuncApp (FuncApp ((BuiltInFunc operator), leftTree), rightTree)
 
-let pAdd = pOp (TokArithmeticOp ADD) ADD
-let pSubtract = pOp (TokArithmeticOp SUBTRACT) SUBTRACT
-let pMultiply = pOp (TokArithmeticOp MULTIPLY) MULTIPLY
-let pDivide = pOp (TokArithmeticOp DIVIDE) DIVIDE
+let pAdd = pOp (TokBuiltInOp ADD) ADD
+let pSubtract = pOp (TokBuiltInOp SUBTRACT) SUBTRACT
+let pMultiply = pOp (TokBuiltInOp MULTIPLY) MULTIPLY
+let pDivide = pOp (TokBuiltInOp DIVIDE) DIVIDE
 
-let pAllOp = pAdd <|> pSubtract <|> pMultiply <|> pDivide
+// let pAllOp = pAdd <|> pSubtract <|> pMultiply <|> pDivide
 
 let pmultiOrDivide = pMultiply <|> pDivide
 let paddOrSubtract = pAdd <|> pSubtract
 
 let pchainMultiDivide = pChainlMin1 pTerm pmultiOrDivide
 let pchainAddSubtract = pChainlMin1 pchainMultiDivide paddOrSubtract
+  
+// can you use reduce on this combinator -> what style indentation is "readable here"
+// is this better than a match statement?
+// unwrap and get rid of the list by choosing the zeroth element
 
-let pAST = pchainAddSubtract
+// Conditional of Ast * Ast * Ast
+// Conditional(condition<Ast>, ifTrue<Ast>, ifFalse<Ast>)
+(*
+    
+(Conditional(FuncApp (FuncApp ((BuiltInFunc LE), Const (Int 6)), Const (Int 10)),
+                Const (Int 5),
+                    Const (Int 10)), 8)
+// ((([Const (Int 6); BuiltInFunc LE; Const (Int 10)], [Const (Int 5)]),[Const (Int 10)]), 8)
+*)
+
+let pIf = 
+    pSkipToken (TokSpecOp IF)
+    >>. pMany (pTerm <|> pBuiltInFunc) 
+    .>> pSkipToken (TokSpecOp THEN) 
+    .>>. pMany (pTerm <|> pBuiltInFunc) 
+
+
+let pCond = pSkipToken (TokSpecOp IF) >>. 
+            pMany (pTerm <|> pBuiltInFunc) .>> 
+            pSkipToken (TokSpecOp THEN) .>>. 
+            pMany (pTerm <|> pBuiltInFunc) .>> 
+            pSkipToken (TokSpecOp ELSE) .>>. 
+            pMany (pTerm <|> pBuiltInFunc)
+            // |>> fun c ->
+            //     fun condition ifTrue ifFalse ->
+            //         Conditional(condition, ifTrue, ifFalse)
+ 
+// if a then b else c
+
+let pAST = pCond
+////////////////////////////////////////////////////////////////////////////////// 
+// current objective 
+// <defn-exp> ::= "let" <var-list> "=" <exp> "in" <exp> "ni"
+// <if-exp> ::= "if" <exp> "then" <exp> "else" <exp> "fi"
+// let str = "let f x = x x"
+
+// Un-used code
+// let pCond = 
+//     parser {
+//         do! pSkipToken (TokStartOp IF)
+//         let! condition = pMany pchainAddSubtract
+//         do! pSkipToken (TokEndOp THEN)
+//         let! ifTrue = pMany pchainAddSubtract
+//         do! pSkipToken (TokEndOp ELSE)
+//         let! ifFalse = pMany pToken
+//         return condition, ifTrue, ifFalse
+//     }
+
+// let pFuncDefExp = 
+//     pSkipToken (TokStartOp FUN)
+//     |>> fun c ->
+//         fun funcName leftTree rightTree ->
+//             FuncDefExp (funcName, (pMany pAST)(leftTree, rightTree))
+
+// FuncDefExp ((Identifier funcName), _, _)
+
+// STARTOP let
+// f of Identifier
+// arg of identifier 
+// EQUALS 
+// let x a b = 
+//     FuncApp (FuncApp ((BuiltInFunc ADD), a), b)
+
+// problem is that it cannot collapse ifTrue and ifFalse into independent asts
+// let pConditional = 
+//     printf "entered pCond"
+//     pSkipToken (TokStartOp IF)
+//     |>> fun c ->
+//         printf "anonym func 1"
+//         fun condition arg1 ifTrue arg2 ifFalse -> 
+//             printf "entered anonym func 2"
+//             match arg1 with 
+//             | THEN ->
+//                 match arg2 with
+//                 | ELSE -> Conditional(condition, ifTrue, ifFalse)
+//                 | _ -> failwith "expected an else here"
+//             | _ -> failwith "expected a then here"
+
+// conditionals
+// function definition expression: fun x = x + 1
+// multiple inputs
+// recursive bracketing
+
+(*
+    x = 1
+    y = 2
+    z = x + y
+*)
