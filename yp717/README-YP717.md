@@ -1,5 +1,6 @@
 # Sample Individual Statement for Individual Code Submission
 
+<!-- YOU HAVE TO ADD A README inidividual statement here -->
 This sample project contains a single F# sample module with uninspiring name `Module1.fs`.
 
 It uses `Dotnet Core 3.1`, with dependency on `Expecto.Fscheck`.

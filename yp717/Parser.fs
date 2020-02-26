@@ -1,13 +1,6 @@
 module Parser
 
 open Common
-// open Tokeniser
-
-// Given Examples
-// builtinPlus a b -> FuncApp(FuncApp(builtinPlus, a), b)
-// a + b -> FuncApp(FuncApp(builtinPlus, a), b)
-// a * b -> FuncApp(FuncApp(builtinTimes, a), b)
-// (a+b)*c) -> FuncApp(FuncApp(builtinTimes, FuncApp(FuncApp(builtinPlus,a),b)),c)
 
 let print x = printfn "%A" x
 
@@ -244,16 +237,12 @@ let pSkipToken tok =
     }
     
 // Up to here we defined basic parsers and parser combinators and now we will work on defining the language grammar
-
 // Get AST Type from BuiltIn Operator
 let pBuiltInFunc = pSatisfy isBuiltInOp |>> getBuiltInOp |>> BuiltInFunc
-
 // Get AST Type from Literal (Const)
 let pConst = pLiteral |>> getLiteral |>> Const
-
 // Get AST Type from Identifier, which is used to identify variables (Var)
 let pVariable = pIdentifier |>> getIdentifier |>> Var
-
 // a single term in an expression is either a constant or a variable
 let pTerm = pConst <|> pVariable
 
@@ -261,13 +250,23 @@ let pTerm = pConst <|> pVariable
 let pOp opTok operator =
     pSkipToken opTok |>> fun c leftTree rightTree -> FuncApp(FuncApp((BuiltInFunc operator), leftTree), rightTree)
 
+// x+1*(3+2)
+
 let pSpecOp = pSatisfy isOperator |>> getOperator
 
 // Define parser for BuiltInFuncTypes
+// add left right
+
 let pAdd = pOp (TokBuiltInOp ADD) ADD
 let pSubtract = pOp (TokBuiltInOp SUBTRACT) SUBTRACT
 let pMultiply = pOp (TokBuiltInOp MULTIPLY) MULTIPLY
 let pDivide = pOp (TokBuiltInOp DIVIDE) DIVIDE
+
+let pLessThan = pOp (TokBuiltInOp LT) LT
+let pLessThanOrEq = pOp (TokBuiltInOp LE) LE
+let pGreaterThan = pOp (TokBuiltInOp GT) GT
+let pGreaterThanOrEq = pOp (TokBuiltInOp GE) GE
+let pEqualTo = pOp (TokBuiltInOp EQ) EQ
 
 // Define precedence of basic BuiltInType operators
 let pAllOp = pAdd <|> pSubtract <|> pMultiply <|> pDivide // not currently being used
@@ -276,21 +275,10 @@ let paddOrSubtract = pAdd <|> pSubtract
 let pchainMultiDivide = pChainlMin1 pTerm pmultiOrDivide
 let pchainAddSubtract = pChainlMin1 pchainMultiDivide paddOrSubtract
 
-// Parser that consumes 0+ whitespaces + specified Parser
-// Make sure this works before moving on
-// TODO:have to make this more generic for all white spaces
-// let pWs0Plus p:Parser<Token> = (pMany (pSkipToken (TokWhitespace (Space))) <&> p
+let pCompOps = pLessThan <|> pLessThanOrEq <|> pGreaterThan <|> pGreaterThanOrEq <|> pEqualTo
+let pChainCompOps = pChainlMin1 pTerm pCompOps
 
-// Make sure this works before moving on
-// not sure about the and combinator that should be here...
-// Parser that consumes 1+ whitespaces + specified Parser
-// let pWs1Plus p:Parser<Token> = pWs0Plus p
-
-// let pWs0Token tok:Token = pWs0Plus tok
-
-// let pWs1Token tok:Token = pWs1Plus tok
-
-// Apply is equivalent to my FuncApp
+let pChainFuncApps = pChainlMin1 pchainAddSubtract pCompOps
 
 let var = pMany (pSkipToken (TokWhitespace(Space)))
 
@@ -301,22 +289,27 @@ let ignoreList =
         | lst -> lst |> List.reduce (fun a b -> ())
     pMap reducer
 
+let pSkipToken' tok = pMany (pSkipToken (tok)) |> ignoreList
+let pSkipTokenMin1' tok = pManyMin1 (pSkipToken (tok)) |> ignoreList
+
 let rec pExpr =
     let pFuncDefExp, pFuncDefExpRec =
         let p keyword f =
             parser {
                 do print "entered funcdefexp"
                 do! pSkipToken (TokSpecOp keyword)
-                do! pMany (pSkipToken (TokWhitespace(Space))) |> ignoreList
+                do! pSkipToken' (TokWhitespace(Space))
                 let! (Var id) = pVariable
-                do printf "(%A)\n" id
-                do! pSkipToken (TokSpecOp EQUALS)
+                do printf "\n id: %A \n" id
+                do! pSkipToken (TokSpecOp EQUALS) // passes this point successfully
+                do print "found equals"
                 let! value = pExpr
-                do printf "%A" value
+                do print "found expression??"
+                do printf "\n value: %A" value
                 do! pSkipToken (TokSpecOp IN)
-                do! pMany(pSkipToken (TokWhitespace(Space))) |> ignoreList
+                do! pSkipToken' (TokWhitespace(Space))
                 let! body = pExpr
-                do printf "%A" body
+                do printf "\n body: %A" body
                 return f (id, value, body)
             }
         p LET FuncDefExp, p LETREC FuncDefExpRec
@@ -325,32 +318,28 @@ let rec pExpr =
         parser {
             do print "entered lambda"
             do! pSkipToken (TokSpecOp LAMBDA)
-            do! pSkipToken (TokWhitespace(Space))
+            do! pSkipToken' (TokWhitespace(Space))
             let! arg = pExpr
             do! pSkipToken (TokSpecOp ARROWFUNC)
             let! body = pExpr
             return Lambda(arg, body)
         }
 
-    // let m = ((print x) y)
-    // let m (((*) x) 5) -> * x y
-    // ws0Char '('
+    // This is working yay
     let pBracketed =
         parser {
             do print "entered bracket"
-            do! pMany (pSkipToken (TokWhitespace(Space))) |> ignoreList
+            do! pSkipToken' (TokWhitespace(Space))
+            do print "between whitespace and lrb"
             do! pSkipToken (TokSpecOp LRB)
+            do print "between whitespace and brackets"
             let! e = pExpr
+            do printf "after e %A" e
             do! pSkipToken (TokSpecOp RRB)
+            do print "after rrb bracket"
             return e
         }
 
-    // let pOp opTok operator =
-    //     pSkipToken opTok
-    //     |>> fun c ->
-    //         fun leftTree rightTree ->
-    //             FuncApp (FuncApp ((BuiltInFunc operator), leftTree), rightTree)
-    // var or const, operator, exp
     let pFuncApp =
         parser {
             do print "entered funcapp"
@@ -368,32 +357,28 @@ let rec pExpr =
     let pIfThenElse =
         parser {
             do print "entered ifthenelse"
-            let body = pVariable <|> pBracketed <|> pConst
-            do! pMany (pSkipToken (TokWhitespace(Space))) |> ignoreList
+            let body = pConst <|> pVariable <|> pBracketed <|> pConst
+            do! pSkipToken' (TokWhitespace(Space))
             do! pSkipToken (TokSpecOp IF)
             let! condition = pVariable <|> pBracketed
-            do! pManyMin1 (pSkipToken (TokWhitespace(Space))) |> ignoreList
-            do! pSkipToken (TokSpecOp THEN)
+            do printf "\n condition: %A" condition // we are getting this condition well now
+            do! pSkipToken' (TokWhitespace(Space)) // changed skip token type here from pSkipTokenMin1'
+            do! pSkipToken (TokSpecOp THEN) 
+            do print "\nfound then" // we are also getting here
             let! ifTrue = body
-            do! pManyMin1 (pSkipToken (TokWhitespace(Space))) |> ignoreList
+            do printf "\n ifTrue: %A" ifTrue
+            do! pSkipToken' (TokWhitespace(Space)) // changed skip token type here from pSkipTokenMin1'
             do! pSkipToken (TokSpecOp ELSE)
             let! ifFalse = body
+            do printf "\n ifTrue: %A" ifFalse
             return Conditional(condition, ifTrue, ifFalse)
         }
 
-    pFuncDefExp <|> pFuncDefExpRec <|> parseLambda <|> pIfThenElse <|> pFuncApp <|> pBracketed <|> pVariable <|> pConst
-(*
-    x = 1
-    y = 2
-    z = x + y
-*)
-(*
+    pFuncDefExp <|> pFuncDefExpRec <|> parseLambda <|> pIfThenElse <|> pFuncApp <|> pBracketed <|> pChainFuncApps <|> pVariable <|> pConst
+    // pFuncDefExp <|> pFuncDefExpRec <|> parseLambda <|> pIfThenElse <|> pFuncApp <|> pBracketed <|> pVariable <|> pConst
 
-(Conditional(FuncApp (FuncApp ((BuiltInFunc LE), Const (Int 6)), Const (Int 10)),
-                Const (Int 5),
-                    Const (Int 10)), 8)
-// ((([Const (Int 6); BuiltInFunc LE; Const (Int 10)], [Const (Int 5)]),[Const (Int 10)]), 8)
-*)
+// pexpr -> ifthenelse -> pbracketed -> pexpr -> funcapp ->
+// TODO: multiple lines
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -418,6 +403,36 @@ let rec pExpr =
 // multiple inputs
 // recursive bracketing
 
-
 // Conditional of Ast * Ast * Ast
 // Conditional(condition<Ast>, ifTrue<Ast>, ifFalse<Ast>)
+
+// Parser that consumes 0+ whitespaces + specified Parser
+// Make sure this works before moving on
+// TODO:have to make this more generic for all white spaces
+// let pWs0Plus p:Parser<Token> = (pMany (pSkipToken (TokWhitespace (Space))) <&> p
+
+// Make sure this works before moving on
+// not sure about the and combinator that should be here...
+// Parser that consumes 1+ whitespaces + specified Parser
+// let pWs1Plus p:Parser<Token> = pWs0Plus p
+
+// let pWs0Token tok:Token = pWs0Plus tok
+
+// let pWs1Token tok:Token = pWs1Plus tok
+
+// Apply is equivalent to my FuncApp
+
+    // let pOp opTok operator =
+    //     pSkipToken opTok
+    //     |>> fun c ->
+    //         fun leftTree rightTree ->
+    //             FuncApp (FuncApp ((BuiltInFunc operator), leftTree), rightTree)
+    // var or const, operator, exp
+
+// open Tokeniser
+
+// Given Examples
+// builtinPlus a b -> FuncApp(FuncApp(builtinPlus, a), b)
+// a + b -> FuncApp(FuncApp(builtinPlus, a), b)
+// a * b -> FuncApp(FuncApp(builtinTimes, a), b)
+// (a+b)*c) -> FuncApp(FuncApp(builtinTimes, FuncApp(FuncApp(builtinPlus,a),b)),c)
