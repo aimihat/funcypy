@@ -18,9 +18,10 @@ type BuiltInType =
     | GE
 
 type Identifier = IDString of string
+// should say keyword
 type Operator = 
-    | BEGIN | LRB | IF | EQUALS | FUN
-    | END | THEN | ELSE | FI | RRB | IN
+    | BEGIN | LRB | IF | EQUALS | LET | LETREC
+    | END | THEN | ELSE | FI | RRB | IN | LAMBDA | ARROWFUNC
 
 type UnaryOps = NOT | NEGATE
 type Literal = 
@@ -31,12 +32,21 @@ type Literal =
     | Tuple of Literal*Literal
 type CombinatorType = | I | S | K
 
+type Whitespace = 
+    | Space             // ' '
+    | FormFeed          // '\f'
+    | LineFeed          // '\n'
+    | CarriageReturn    // '\r'
+    | HorizontalTab     // '\t'
+    | VerticalTab       // '\v'
+
 type Token = 
     | TokLit of Literal
     | TokUnaryOp of UnaryOps
     | TokSpecOp of Operator
     | TokIdentifier of Identifier
     | TokBuiltInOp of BuiltInType
+    | TokWhitespace of Whitespace
     // | TokNull
 ////////////////////////////////////// OPERATOR DEFINITION //////////////////////////////////////
 
