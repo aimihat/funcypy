@@ -109,7 +109,7 @@ let parcedResult: string -> Term =
         >> parse
 
 // ???
-print <| interpString "(\\x.\\y.x \\z.z)"
-print <| interpString "(\\x.x  \\y.(y y))"
+print <| interpString "(\\x.(x x) \\x.x)"
+print <| interpString "(\\x.x  \\y.y)"
 
 //print <| parcedResult "(\\x.x  \\y.(y y))"

@@ -4,11 +4,14 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Program.fs" />
+    <Compile Include="Lambda.fs" />
     <Compile Include="Lambda.fsx" />
     <Compile Include="Tests.fsx" />
     <Compile Include="gillilandImpl.fsx" />
     <Compile Include="TestArith.fsx" />
     <Compile Include="MyLambda.fsx" />
+    <Compile Include="TestBeta.fsx" />
+    <Compile Include="TestExpEval.fsx" />
+    <Compile Include="TestFsharp.fsx" />
   </ItemGroup>
 </Project>

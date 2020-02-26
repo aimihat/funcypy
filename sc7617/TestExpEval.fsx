@@ -29,7 +29,7 @@ type Value =
 type Ast =    
     | Statement of Ast    
     | Expression of Ex    
-    | Function of Identifier option * Identifier * Ast // Lambda (arg, body)
+    | Function of Identifier option * Identifier * Ast
     | FunctionDef of Identifier * Identifier * Ast
 
     // | Scope of Ast list option
@@ -58,80 +58,58 @@ and LambdaType =
     | BetaReductionT of LambdaType * LambdaType
     //| BetaReducion of LambdaType * LambdaType
 
-//and Env = (string*LambdaType) list    
-and Env =  Map<string, LambdaType>
+and Env = (string*LambdaType) list    
 
 
 
 
 
 
+//////////////////////
+/// Instructions//////
+/// //////////////////
 
-
-//////////////////////////////////////////////////////////////////
-//////////////////////////                  //////////////////////
-//////////////////////////   PARSING        //////////////////////
-//////////////////////////                  //////////////////////
-//////////////////////////////////////////////////////////////////
-
-
-let (|LAMBDAMATCH|_|) = 
-    let innerFn inp = 
-        match inp with 
-        | Function (None, IdString arg, body) -> Some (arg, body)
-        | _ -> None // used to be failwith
-    innerFn
-
-// Receive Function(None , indetifier "a" , AST) * Inp (Literal)
-
-// focus interly on post-parsing Funcion to match it with LambdaType
-
-let parse: (Ast -> LambdaType) = 
-    let rec innerFn inp = 
-        match inp with
-        //  Function (Lambda)
-        | LAMBDAMATCH (id, body) -> LambdaT (id , (innerFn body))
-
-        // all expressions
-        | Expression (exp) -> LambdaEx (exp)
-
-        // Invalid function application
-        | FuncApp (Expression _, LAMBDAMATCH _) -> failwith "not acceptable match (variable lambda)"
-        // Match conditionals and comparators
-        | FuncApp (LAMBDAMATCH (id, body), exp) -> BetaReductionT (LambdaT (id, (innerFn body)), innerFn exp)
-        | FuncApp (func, exp) -> ApplicationT (innerFn func , innerFn exp)
-        
-        // Beta reduction if second argument passed is a value or variable
-        // Application works the same ways as beta reductions
-        // Beta reduction evaluation variable must not be LambdaT variable -> it should be declared as an Ex type
-        // Beta reduction can only take input Lambdat (or ClosureT ? ) and Ex and after further reductions made, perform calculation  
-        // or reduction -> the result might be an extension
-        // illegal case for funcion applictation -> in the future replace EXPVAR by EXPMATCH, since any expression is not valid
-        // Beta Reduction case
-        
-        // Evaluate alpha reduction
-
-        // evaluatio beta reduction
-        | _ -> failwith "Lambda Parsing Error"
-    innerFn
-
+//  How to parse expression
+/// expression can be:
+///  -> Variable
+///  -> Arithmetics  for example: Expression (Arithmetics (Expression(Variable ("a")), Add, Expression(Variable ("b"))))
+///  -> Comaparison for example:  Expression (Comparison (Expression(Variable ("a")), More, Expression(Variable ("b"))))
+///  -> Literal for example: 1, 2, "I wanna go to bed:("
+///  Everything above must be able to be replaced by the incoming expressions and also everything must be aple to be saved in 
+/// the environment
+/// 
+/// 
+/// How can we calculate the expressions above??
+/// Suppose we have the input:  Expression (Arithmetics (Expression(Variable ("a")), Add, Expression(Variable ("b"))))
+/// which is the same as a + b, how do we evaluate it??
+/// Evaluate at the seperate stage. Check if the expression can be evaluated at this stage, for example 2 + 2
+/// cannot be reduced or evaluated further -> we can make it 4
+/// 
+/// The plan is the following
+/// match inp with
+/// | Lambda expression ->
+///     match expression with
+///     | Variable -> 
+///             search_environment_and_replace
+///             |> calculate
+///     | Arithmetics (exp1, sign, exp2) -> 
+///             let exp1Evaluated = eval env exp1
+///             let exp2Evaluated = eval env exp2
+///             evaluated match_arithmetics_built-in_funcion exp1Evaluated exp2Evaluated
+///     | Compare (exp1, sign, exp2) -> 
+///             let exp1Evaluated = eval env exp1
+///             let exp2Evaluated = eval env exp2
+///             evaluated match_comparison_built-in_funcion exp1Evaluated exp2Evaluated
+///     | Literal n -> Literal
+///     | _ -> failwith "expression cannot be evaluated"
  
 
 
-
-
-
-
-
-
-
-
-//////////////////////////////////////////////////////////////////
-//////////////////////////                  //////////////////////
-//////////////////////////   ARITHMETICS    //////////////////////
-//////////////////////////                  //////////////////////
-//////////////////////////////////////////////////////////////////
-
+ /// Helpful functions to match:
+ /// LambdaEx Variable
+ /// LambdaEx Literal
+ /// LambdaEx Arithmetics
+ /// 
 
 let (|LAMBDAVAR|_|) =
     let innerFn inp = 
@@ -230,8 +208,7 @@ let (|EVALARITHM|_|) =
 
 
 
-/////////////////    Comparison Evaluation     ///////////////////
-
+// Evaluate Comparison!!!!
 // type Comparison = Eq | Ne | Lt | Gt | Le | Ge
 
 
@@ -326,30 +303,15 @@ let (|EVALCOMP|_|) =
         | _ -> None
     innerFn
 
-//////////////       END COMPARISON EVALUATION          ///////////////////
 
 
-
-
-
-
-
-
-//////////////////////////////////////////////////////////////////
-//////////////////////////                  //////////////////////
-//////////////////////////   EVALUATION     //////////////////////
-//////////////////////////                  //////////////////////
-//////////////////////////////////////////////////////////////////
-
-let rec eval (env: Env) (inp: LambdaType) =
+let rec eval (env: Env) (inp: LambdaType): LambdaType =
     let innerFn =  
-        match inp with 
-        // make sure this variable has been declared before and therefore perform search through the environment 
-        | LambdaEx (Variable (IdString exp)) -> 
-            match Map.tryFind exp env with
-                | Some term -> term
-                | None -> failwith "Couldn't find a Variable in the environment"
-
+        match inp with
+        | LAMBDAVAR variable ->
+            match List.tryFind (fun (aName, term) -> aName = variable) env with
+            | Some (_, term) -> term
+            | None -> failwith "Couldn't find a term by name"
         | LambdaEx (EVALARITHM result) -> 
             /// result itself is an expression. It can give us either Literal or Variable
             /// so if it is literal we return literal, if this is expression of variable we perform search for each variable
@@ -388,78 +350,11 @@ let rec eval (env: Env) (inp: LambdaType) =
             
             | Literal (x) -> LambdaEx (Literal x)
             | _ -> failwith "Failed to eval comparison expression"
-        // if lambda is given save the relevant information into the closure and update the evironment 
-        | LambdaT (id, body) -> 
-            if (Map.isEmpty env ) then ClosureT (id, body, env) else ClosureT (id, eval env body, env)
-
-        // if beta reduction is given, evaluate id & body and then perform beta reduction
-        | BetaReductionT (lambda, value) -> 
-            let evaluatedLambdaEx = eval env lambda
-            match evaluatedLambdaEx with
-            | ClosureT (arg, body, evalenv) ->
-                // in order to perform beta reduction with expression we need to match for variable & literals before further evaluation
-                match value with
-                | LambdaEx (Literal _)->
-                    // if value passed by expression it's already evaluated
-                    // pass expression as a term to substitue variable x
-                    // replace the argument
-                    // if variable is given then transform it to lambda and carry on as before
-                    // if Literal is given -> calculate
-                    let evaluatedValue = value
-                    //let newEnv = (arg, evaluatedValue)::evalenv @ env
-                    let newEnv = evalenv.Add (arg, evaluatedValue)
-                    eval newEnv body
-                |  LambdaT _->
-                    let evaluatedValue = eval env value
-                    let newEnv = evalenv.Add (arg, evaluatedValue)
-
-                    //let newEnv = (arg, evaluatedValue)::evalenv @ env
-                    //BetaReductionT (evaluatedLambdaEx, value)
-                    // environment will replace every appearance of arg with evaluated value.
-
-                    // debug intput
-                    //print <| sprintf "new environment is %A \n" newEnv
-                    eval newEnv body
-                | _ -> 
-                    failwith "Invalid definition of Beta Reduction"
-            | _ -> failwith "cannot perform beta reduction"
-                // return evaluated reduction for futher calulations
-                // perform arthmetics and return LambdaEx!!
-             // inputs like (a a) are expected. If (lambda a) is passed the expression will be evaluated as a beta reduction
-             // Further match if func is an arithmetic expression and value is a literal therefore we may calculate the value  
-        // Do I need Application
-        | ApplicationT (func, value) -> 
-            ApplicationT (eval env func, eval env value)
-        | ClosureT (arg, body, oldenv) -> ClosureT (arg, body, oldenv)
-        //| _ -> failwith "failed to evaluate the expression"y
-    innerFn
-
-    
-
-/// eval funcion can give us 2 main returns:
-/// Literal
-/// Lambda
-/// if Literal is given it should return Literal for further evaluation
-/// if Lambda (most likely to return error with expression given)
-
-
-
-let printLambda =
-    let rec innerFn (inp: LambdaType) = 
-        match inp with
-        | LambdaT (arg, body) -> "lambda " :: arg :: "." :: innerFn body
-        | ClosureT (arg, body, env) -> "lambda " :: arg :: "." :: innerFn body
-        | LambdaEx (Variable(IdString arg)) -> [arg]
-        | ApplicationT (exp1, exp2) -> ["("] @ (innerFn exp1) @ [" "] @ (innerFn exp2) @ [")"]
-        | BetaReductionT (lambda, exp) -> ["("] @ (innerFn lambda) @ [")" ; " "] @ (innerFn exp)
-        | _ -> failwith "Failed to printLambda"
-    innerFn
-        >> String.concat ("") 
-
-let evaluateLamda: Ast -> string = 
-    parse
-        >> eval Map.empty
-            >> printLambda
+        //| LambdaEx (Comparison (EVALCOMP result)) ->
+            // REPLACE FOR SOMETHING MORE EFFIECIENT
+            
+    // make sure this variable has been declared before and therefore perform search through the environment 
+    innerFn 
 
 
 
@@ -468,39 +363,11 @@ let evaluateLamda: Ast -> string =
 
 
 
+////////////////////////////////
+/// LET'S WRITE SOME TESTS /////
+/// ///////////////////////////
 
-
-
-
-//////////////////////////////////////////////////////////////////
-//////////////////////////                  //////////////////////
-//////////////////////////      TESTS       //////////////////////
-//////////////////////////                  //////////////////////
-//////////////////////////////////////////////////////////////////
-
-//  Test: lambda x . (x x)
-let inp1 = Function (None, IdString "x", FuncApp(Expression (Variable (IdString "x")), Expression (Variable (IdString "x"))))
-let inp2 = FuncApp (inp1, Function (None, IdString "y", Expression (Variable (IdString "y"))))
-
-// lambda z . z 
-let inp4 = Function (None, IdString "z",Expression (Variable (IdString "z")))
-// (Lambda x . Lambda y . x) Lambda z . z
-let inp3 = FuncApp (Function (None, IdString "x",Function (None, IdString "y", Expression (Variable (IdString "x")))), inp4)
-
-// print <| evaluateLamda inp1
-// print <| evaluateLamda inp2
-print <| printLambda (parse inp3)
-print <| parse inp3
-print <| evaluateLamda inp3
-
-
-
-
-///////////////////////////////////////////////////////////////////////
-////////////////     Arithmetics Evaluation Test     //////////////////
-/// ///////////////////////////////////////////////////////////////////
-
-
+//let lambdafunc = LambdaT ()
 
 let testInp1 = lambdaVar "b"
 let testInp2 = LambdaEx (Arithmetic (Variable (IdString "b"), Add, Variable (IdString "a")))
@@ -518,7 +385,7 @@ let testInp10 = LambdaEx (Comparison (Literal (String "Hey"), Eq, Literal (Strin
 
 
 
-let environment = Map.ofList ["b", lambdaVar "c" ; ("a", lambdaVar "a")]
+let environment = ["b", lambdaVar "c" ; ("a", lambdaVar "a")]
 
 // print <| eval environment testInp1
 // print <| eval environment testInp2
@@ -533,4 +400,4 @@ print <| eval environment testInp10
 
 
 print "Final Test"
-print <| eval (Map.ofList ["x", LambdaEx(Literal(Double -2.56))]) (LambdaEx (Arithmetic(Variable (IdString "x"), Add, Variable (IdString "x"))))
+print <| eval ["x", LambdaEx(Literal(Double -2.56))] (LambdaEx (Arithmetic(Variable (IdString "x"), Add, Variable (IdString "x"))))
