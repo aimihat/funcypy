@@ -22,16 +22,56 @@ let main(argv) =
     // // FuncDefExp (funcName, leftTree, rightTree)
     // let f x = y = x + 1 in z = y + 2 in z
     // let 
-    let inp7 = [TokSpecOp LET; 
-                TokIdentifier (IDString "f");  
-                TokSpecOp EQUALS; 
-                TokWhitespace (Space);
-                TokLit (Int 5); 
-                TokWhitespace (Space);
-                TokBuiltInOp ADD; 
-                TokWhitespace (Space);
-                TokLit (Int 1)]
 
+    // let id = value in body
+    (*  let f x = 
+            let m = x + 1 
+            m
+    *)
+
+    (*
+    (FuncDefExp
+        (IDString "f",[Var (IDString "x")],
+            Conditional
+                (FuncApp (FuncApp (BuiltInFunc LE,Var (IDString "x")),Const (Int 10)),
+                Var (IDString "x"),
+                FuncApp (FuncApp (BuiltInFunc ADD,Var (IDString "x")),Const (Int 1)))),
+   19)
+    
+    *)
+    let inp7 = [TokSpecOp LET; 
+                TokWhitespace (Space);
+                TokIdentifier (IDString "f");  
+                TokWhitespace (Space);
+                TokIdentifier (IDString "x");
+                TokSpecOp EQUALS;
+                TokWhitespace (Space); 
+                    TokSpecOp IF;
+                        TokSpecOp LRB;
+                            TokIdentifier (IDString "x");
+                            TokBuiltInOp LE; 
+                            TokLit (Int 10);
+                        TokSpecOp RRB;
+                    TokSpecOp THEN;
+                        TokIdentifier (IDString "x");
+                    TokSpecOp ELSE;
+                        TokIdentifier (IDString "x");
+                        TokBuiltInOp ADD; //
+                        TokLit (Int 1);] //
+
+    let inp9 = [
+                TokSpecOp IF;
+                    TokSpecOp LRB;
+                        TokLit (Int 6); 
+                        TokBuiltInOp LE; 
+                        TokLit (Int 10);
+                    TokSpecOp RRB;
+                TokSpecOp THEN;
+                    TokLit (Int 5);
+                TokSpecOp ELSE;
+                    TokLit (Int 6);
+                ]
+                
     // // Conditional(condition, leftTree, rightTree)
     // // condition: if 6 < 10
     // // leftTree: 5
