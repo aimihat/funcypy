@@ -48,6 +48,17 @@ type Token =
     | TokBuiltInOp of BuiltInType
     | TokWhitespace of Whitespace
     // | TokNull
-////////////////////////////////////// OPERATOR DEFINITION //////////////////////////////////////
+
+//////////////////////////////////////// AST DEFINITION ///////////////////////////////////////
+
+type Ast =
+    | Const of Literal
+    | Var of Identifier
+    | FuncApp of Ast * Ast
+    | BuiltInFunc of BuiltInType
+    | FuncDefExp of Identifier * list<Ast> * Ast 
+    | FuncDefExpRec of Identifier * list<Ast> * Ast // this would be a very neat addition
+    | Lambda of Ast * Ast
+    | Conditional of Ast * Ast * Ast
 
 
