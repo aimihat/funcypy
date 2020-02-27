@@ -218,7 +218,6 @@ let pManyMin1 tparser =
 
 // Skips a specific token given as input
 
-// THE PROBLEM IS HERE!!!
 let pSkipToken tok =
     parser {
         let! token = pToken
@@ -341,6 +340,6 @@ let rec pExpr =
             return Conditional(condition, ifTrue, ifFalse)
         }
 
-    pFuncDefExp <|> pFuncDefExpRec <|> parseLambda <|> pIfThenElse <|> pFuncApp <|> pBracketed <|> pChainedFuncApps <|> pVariable <|> pConst
-    
-// TODO: multiple lines
+    pFuncDefExp <|> pFuncDefExpRec <|> parseLambda <|> pIfThenElse <|> pFuncApp <|> pBracketed <|> pChainedFuncApps <|> pVariable <|> pConst 
+
+
