@@ -5,6 +5,7 @@ This folder contains my individual code submission for the High Level Programmin
 A parser combinator approach with computation expressions was used to tackle the parser from a different perspective than Tick 3. Parser combinators proved difficult to work with at first but ultimately made the parser and thereby the language grammar much easier to extend and define. 
  
 # How will your code be used by team (if all goes well) including what order are modules in your team project compiled?
+
 The code in this folder will be used by the team to parse a stream of tokens passed from the tokeniser to form an abstract syntax tree (AST). No other modules have been used from other team members in the development of the parser and all functions were written independently. While our team discussed strategies and approaches for each of the parts of the project, each person wrote code specifically for their own module (or multiple modules where applicable in the specific folder name).
 
 # What help have you obtained/given others debugging or doing code review?
