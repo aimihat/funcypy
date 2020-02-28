@@ -1,4 +1,4 @@
-
+﻿module Lambda
 
 /// Helpful functions
 
@@ -86,44 +86,43 @@ let (|LAMBDAMATCH|_|) =
 
 // focus interly on post-parsing Funcion to match it with LambdaType
 
-let parse: (Ast -> LambdaType) = 
+
+let parse: (Result<Ast,string> -> Result<LambdaType,string>) = 
+    let validate f inp = 
+        match f inp with
+        | Error msg -> failwith msg
+        | Ok exp -> Some exp
+                    
     let rec innerFn inp = 
         match inp with
+        // If error recieved from parsing
+        | Error msg -> Error msg
         //  Function (Lambda)
-        | LAMBDAMATCH (id, body) -> LambdaT (id , (innerFn body))
+        | Ok (LAMBDAMATCH (id, body)) -> 
+            match innerFn (Ok body) with
+            | Error msg -> Error msg
+            | Ok exp ->  Ok (LambdaT (id , exp))
+            | _ -> Error "Invalid type of Lambda"
 
         // all expressions
-        | Expression (exp) -> LambdaEx (exp)
+        | Ok (Expression (exp)) -> Ok (LambdaEx (exp))
 
         // Invalid function application
-        | FuncApp (Expression _, LAMBDAMATCH _) -> failwith "not acceptable match (variable lambda)"
+        | Ok (FuncApp (Expression _, LAMBDAMATCH _)) -> Error "not acceptable match (variable lambda)"
         // Match conditionals and comparators
-        | FuncApp (LAMBDAMATCH (id, body), Expression exp) -> BetaReductionT (LambdaT (id, (innerFn body)), innerFn (Expression exp))
-        | FuncApp (func, exp) -> ApplicationT (innerFn func , innerFn exp)
-        
-        // Beta reduction if second argument passed is a value or variable
-        // Application works the same ways as beta reductions
-        // Beta reduction evaluation variable must not be LambdaT variable -> it should be declared as an Ex type
-        // Beta reduction can only take input Lambdat (or ClosureT ? ) and Ex and after further reductions made, perform calculation  
-        // or reduction -> the result might be an extension
-        // illegal case for funcion applictation -> in the future replace EXPVAR by EXPMATCH, since any expression is not valid
-        // Beta Reduction case
-        
-        // Evaluate alpha reduction
-
-        // evaluatio beta reduction
-        | _ -> failwith "Lambda Parsing Error"
+        | Ok (FuncApp (LAMBDAMATCH (id, body), exp)) -> 
+            match innerFn (Ok body), innerFn (Ok exp) with
+            | Error msg, Error _ -> Error msg
+            | Ok body, Ok exp -> Ok (BetaReductionT (LambdaT (id, (body)), (exp)))
+            | _ -> Error "Invalid Beta Reduction"
+        | Ok (FuncApp (func, exp)) -> 
+            match innerFn (Ok func), innerFn (Ok exp) with
+            | Error msg, Error _ -> Error msg
+            | Ok func, Ok exp -> Ok (ApplicationT (func , exp))
+            | _ -> Error "Invalid Application Parsing Match"
+     
+        | _ -> Error "Lambda Parsing Error"
     innerFn
-
- 
-
-
-
-
-
-
-
-
 
 
 //////////////////////////////////////////////////////////////////
@@ -341,62 +340,66 @@ let (|EVALCOMP|_|) =
 //////////////////////////                  //////////////////////
 //////////////////////////////////////////////////////////////////
 
-let rec eval (env: Env) (inp: LambdaType) =
+let rec eval (env: Env) (inp: Result<LambdaType,string>): Result<LambdaType,string> =
     let innerFn =  
         match inp with 
         // make sure this variable has been declared before and therefore perform search through the environment 
-        | LambdaEx (Variable (IdString exp)) -> 
+        | Ok (LambdaEx (Variable (IdString exp))) -> 
             match Map.tryFind exp env with
-                | Some term -> term
-                | None -> failwith "Couldn't find a Variable in the environment"
+                | Some term -> Ok term
+                | None -> Error "Couldn't find a Variable in the environment"
 
-        | LambdaEx (EVALARITHM result) -> 
+        | Ok (LambdaEx (EVALARITHM result)) -> 
             /// result itself is an expression. It can give us either Literal or Variable
             /// so if it is literal we return literal, if this is expression of variable we perform search for each variable
             match result with
             | Arithmetic (Variable (IdString a), sign, Variable (IdString b)) ->
-                let evaluatedA =  eval env (lambdaVar a)
-                let evaluatedB =  eval env (lambdaVar b)
+                let evaluatedA =  eval env (Ok (lambdaVar a))
+                let evaluatedB =  eval env (Ok (lambdaVar b))
                 match evaluatedA , evaluatedB with
-                | LambdaEx (Literal (a)), LambdaEx (Literal b) -> 
+                | Ok (LambdaEx (Literal (a))), Ok (LambdaEx (Literal b)) -> 
                     match Arithmetic (Literal a, sign, Literal b) with
-                    | EVALARITHM result -> LambdaEx result
+                    | EVALARITHM result -> Ok (LambdaEx result)
                     | _ -> failwith "failed to calculate arithmetic"
-                | LambdaEx (a), LambdaEx (b) -> LambdaEx (Arithmetic (a, sign, b))
+                | Ok (LambdaEx a), Ok (LambdaEx b) -> Ok (LambdaEx (Arithmetic (a, sign, b)))
                 | _ -> failwith "Failed to evaluate Arithmetic from the environment"
                 //| _ -> failwith "Cannot Evaluate"
             
-            | Literal (x) -> LambdaEx (Literal x)
+            | Literal (x) -> Ok (LambdaEx (Literal x))
             | _ -> failwith "Failed to eval arithmetic expression"
 
 
-        | LambdaEx (EVALCOMP result) -> 
+        | Ok (LambdaEx (EVALCOMP result)) -> 
             /// result itself is an expression. It can give us either Literal or Variable
             /// so if it is literal we return literal, if this is expression of variable we perform search for each variable
             match result with
             | Comparison (Variable (IdString a), sign, Variable (IdString b)) ->
-                let evaluatedA =  eval env (lambdaVar a)
-                let evaluatedB =  eval env (lambdaVar b)
+                let evaluatedA =  eval env (Ok (lambdaVar a))
+                let evaluatedB =  eval env (Ok (lambdaVar b))
                 match evaluatedA , evaluatedB with
-                | LambdaEx (Literal (a)), LambdaEx (Literal b) -> 
+                | Ok (LambdaEx (Literal a)), Ok (LambdaEx (Literal b)) -> 
                     match Comparison (Literal a, sign, Literal b) with
-                    | EVALARITHM result -> LambdaEx result
+                    | EVALARITHM result -> Ok (LambdaEx result)
                     | _ -> failwith "failed to calculate comparison"
-                | LambdaEx (a), LambdaEx (b) -> LambdaEx (Comparison (a, sign, b))
+                | Ok (LambdaEx a), Ok (LambdaEx b) -> Ok (LambdaEx (Comparison (a, sign, b)))
                 | _ -> failwith "Failed to evaluate Comparison from the environment"
                 //| _ -> failwith "Cannot Evaluate"
             
-            | Literal (x) -> LambdaEx (Literal x)
+            | Literal (x) -> Ok (LambdaEx (Literal x))
             | _ -> failwith "Failed to eval comparison expression"
         // if lambda is given save the relevant information into the closure and update the evironment 
-        | LambdaT (id, body) -> 
-            if (Map.isEmpty env ) then ClosureT (id, body, env) else ClosureT (id, eval env body, env)
-
+        | Ok (LambdaT (id, body)) -> 
+            if (Map.isEmpty env ) then Ok (ClosureT (id, body, env)) 
+                else 
+                    match eval env (Ok body) with
+                    | Error msg -> Error msg
+                    | Ok (body) -> Ok (ClosureT (id,body, env))
+                    | _ -> Error "Wrong Lambda Applied"
         // if beta reduction is given, evaluate id & body and then perform beta reduction
-        | BetaReductionT (lambda, value) -> 
-            let evaluatedLambdaEx = eval env lambda
+        | Ok (BetaReductionT (lambda, value)) -> 
+            let evaluatedLambdaEx = eval env (Ok lambda)
             match evaluatedLambdaEx with
-            | ClosureT (arg, body, evalenv) ->
+            | Ok (ClosureT (arg, body, evalenv)) ->
                 // in order to perform beta reduction with expression we need to match for variable & literals before further evaluation
                 match value with
                 // LambdaEx includes beta-reduction cases
@@ -409,7 +412,7 @@ let rec eval (env: Env) (inp: LambdaType) =
                     let evaluatedValue = value
                     //let newEnv = (arg, evaluatedValue)::evalenv @ env
                     let newEnv = evalenv.Add (arg, evaluatedValue)
-                    eval newEnv body
+                    eval newEnv (Ok body)
                 | _ -> 
                     failwith "Invalid definition of Beta Reduction"
             | _ -> failwith "cannot perform beta reduction"
@@ -418,35 +421,61 @@ let rec eval (env: Env) (inp: LambdaType) =
              // inputs like (a a) are expected. If (lambda a) is passed the expression will be evaluated as a beta reduction
              // Further match if func is an arithmetic expression and value is a literal therefore we may calculate the value  
         // Do I need Application
-        | ApplicationT (func, value) ->
-            let evaluatedFunc = eval env func
+        | Ok (ApplicationT (func, value)) ->
+            let evaluatedFunc = eval env (Ok func)
             match evaluatedFunc with
-            | ClosureT (arg, body, evaluatedEnv) ->
-                let evaluatedValue = eval env value
+            | Ok (ClosureT (arg, body, evaluatedEnv)) ->
+                let evaluatedValue = eval env (Ok value)
                 match evaluatedValue with
-                | ClosureT (valueArg, valueBody, valueEnv) ->
-                    let newEnv = valueEnv.Add (arg, evaluatedValue)
-                    eval newEnv body
+                | Ok (ClosureT (valueArg, valueBody, valueEnv)) ->
+                    let newEnv = valueEnv.Add (arg, (ClosureT (valueArg, valueBody, valueEnv)))
+                    eval newEnv (Ok body)
                 | _ -> 
                     let msg = sprintf "Failed to evaluate Application, %A is given" inp
-                    failwith msg
-            | _ -> ApplicationT (eval env func, eval env value)
+                    Error msg
+            | _ -> 
+                match eval env (Ok func), eval env (Ok value) with
+                | Error msg, Error _ -> Error msg
+                | Ok func, Ok exp -> Ok (ApplicationT (func, exp))
+                | _ -> 
+                    let msg = sprintf "Failed to evaluate Application, %A is given" inp
+                    Error msg
             
-        | ClosureT (arg, body, oldenv) -> ClosureT (arg, body, oldenv)
+        | Ok (ClosureT (arg, body, oldenv)) -> Ok (ClosureT (arg, body, oldenv))
         //| _ -> failwith "failed to evaluate the expression"y
     innerFn
 
 let LambdaTypeToString =
-    let rec innerFn (inp: LambdaType) = 
+    let okToStr (inp: Result<string list,string>): string list =
         match inp with
-        | LambdaT (arg, body) -> "lambda " :: arg :: "." :: innerFn body
-        | ClosureT (arg, body, env) -> "lambda " :: arg :: "." :: innerFn body
-        | LambdaEx (Variable(IdString arg)) -> [arg]
-        | ApplicationT (exp1, exp2) -> ["("] @ (innerFn exp1) @ [" "] @ (innerFn exp2) @ [")"]
-        | BetaReductionT (lambda, exp) -> ["("] @ (innerFn lambda) @ [")" ; " "] @ (innerFn exp)
-        | _ -> failwith "Failed to printLambda"
-    innerFn
-        >> String.concat ("") 
+        | Ok str -> str
+        | Error msg -> [msg]
+
+    let rec innerFn (inp: Result<LambdaType,string>) = 
+        match inp with
+        | Ok (LambdaT (arg, body)) -> 
+            match innerFn (Ok body) with
+            | Error msg -> Error msg
+            | Ok body -> Ok ("lambda " :: arg :: "." :: body)
+        | Ok (ClosureT (arg, body, env)) -> 
+            match innerFn (Ok body) with
+            | Error msg -> Error msg
+            | Ok body -> Ok ("lambda " :: arg :: "." ::  body)
+        | Ok (LambdaEx (Variable(IdString arg))) ->Ok [arg]
+        | Ok (ApplicationT (exp1, exp2)) -> 
+            match innerFn (Ok exp1),innerFn (Ok exp2)  with
+            | Error msg, Error _ -> Error msg
+            | Ok exp1, Ok exp2 -> Ok (["("] @ (exp1) @ [" "] @ (exp2) @ [")"])
+            | _ -> Error "Failed to print"
+        | Ok (BetaReductionT (lambda, exp)) ->
+            match innerFn (Ok lambda),innerFn (Ok exp) with
+            | Error msg, Error _ -> Error msg
+            | Ok lambda, Ok exp -> Ok (["("] @ (lambda) @ [")" ; " "] @ (exp))
+            | _ -> Error "Failed to print"
+        | _ -> Error "Failed to printLambda"
+    (innerFn)
+        >> okToStr
+            >> String.concat ("") 
 
 
     
@@ -454,22 +483,22 @@ let LambdaTypeToString =
 // convert to back to Ast
 
 let toAst = 
-    let innerFn (inp: LambdaType): Result<Ast,string> = 
+    let innerFn (inp: Result<LambdaType,string>): Result<Ast,string> = 
         match inp with
-        | LambdaEx exp -> Ok (Expression exp)
-        | closure -> 
-            let lambdaString = LambdaTypeToString closure
+        | Ok (LambdaEx (Literal exp)) -> Ok (Expression (Literal exp))
+        | Ok closure -> 
+            let lambdaString = LambdaTypeToString (Ok closure)
             let msg = sprintf "No valid expression supplied for lambda calculation. Evaluated pure lambda is: %A" lambdaString
             Error msg
     innerFn
 
 // Final function to evaluate the output
-let displayLambda: Ast -> string =
+let displayLambda: Result<Ast,string> -> string =
     parse
         >> eval Map.empty
             >> LambdaTypeToString
 
-let lambda: Ast -> Result<Ast,string> = 
+let lambda: Result<Ast,string> -> Result<Ast,string> = 
     parse
         >> eval Map.empty
             >> toAst
@@ -486,48 +515,48 @@ let lambda: Ast -> Result<Ast,string> =
 //////////////////////////////////////////////////////////////////
 
 //  Test: lambda x . (x x)
-let inp1 = Function (None, IdString "x", FuncApp(Expression (Variable (IdString "x")), Expression (Variable (IdString "x"))))
-let inp2 = FuncApp (inp1, Function (None, IdString "y", Expression (Variable (IdString "y"))))
+// let inp1 = Function (None, IdString "x", FuncApp(Expression (Variable (IdString "x")), Expression (Variable (IdString "x"))))
+// let inp2 = FuncApp (inp1, Function (None, IdString "y", Expression (Variable (IdString "y"))))
 
-// lambda x . x + x
-let inpAdd = Function(None, IdString "x", Expression( Arithmetic ((Variable (IdString "x")), Add, (Variable(IdString "x")))))
-// lambda z . z 
-let inp4 = Function (None, IdString "z",Expression (Variable (IdString "z")))
-// (Lambda x . Lambda y . x) Lambda z . z
-let inp3 = FuncApp (Function (None, IdString "x",Function (None, IdString "y", Expression (Variable (IdString "x")))), inp4)
-let inp5 = FuncApp (inpAdd, inp4)
-// print <| evaluateLamda inp1
-// print <| evaluateLamda inp2
-print <| parse inp3
-//print <| LambdaTypeToString (parse inp5)
-print <| eval Map.empty (parse inp3)
-print <| displayLambda inp3
-
-
-
-///////////////////////////////////////////////////////////////////////
-////////////////     Arithmetics Evaluation Test     //////////////////
-/// ///////////////////////////////////////////////////////////////////
+// // lambda x . x + x
+// let inpAdd = Function(None, IdString "x", Expression( Arithmetic ((Variable (IdString "x")), Add, (Variable(IdString "x")))))
+// // lambda z . z 
+// let inp4 = Function (None, IdString "z",Expression (Variable (IdString "z")))
+// // (Lambda x . Lambda y . x) Lambda z . z
+// let inp3 = FuncApp (Function (None, IdString "x",Function (None, IdString "y", Expression (Variable (IdString "x")))), inp4)
+// let inp5 = FuncApp (inpAdd, inp4)
+// // print <| evaluateLamda inp1
+// // print <| evaluateLamda inp2
+// print <| parse inp3
+// //print <| LambdaTypeToString (parse inp5)
+// print <| eval Map.empty (parse inp3)
+// print <| displayLambda inp3
 
 
 
-let testInp1 = lambdaVar "b"
-let testInp2 = LambdaEx (Arithmetic (Variable (IdString "b"), Add, Variable (IdString "a")))
-let testInp3 = LambdaEx (Arithmetic (Literal (Int 1), Add, Literal (Int 1)))
-let testInp4 = LambdaEx (Arithmetic (Literal (Int 1), Subtract, Literal (Int 1)))
-let testInp5 = LambdaEx (Arithmetic (Literal (Double 1.1), Subtract, Literal (Double 1.2)))
-let testInp6 = LambdaEx (Arithmetic (Literal (String "Hello "), Add, Literal (String "World")))
-let testInp7 = LambdaEx (Arithmetic (Literal (Double 1.1), Multiply, Literal (Double 1.2)))
-
-
-let testInp8 = LambdaEx (Comparison (Literal (Double 1.1), Lt, Literal (Double 1.2)))
-let testInp9 = LambdaEx (Comparison (Literal (Double 1.1), Eq, Literal (Double 1.2)))
-let testInp10 = LambdaEx (Comparison (Literal (String "Hey"), Eq, Literal (String "Hey")))
+// ///////////////////////////////////////////////////////////////////////
+// ////////////////     Arithmetics Evaluation Test     //////////////////
+// /// ///////////////////////////////////////////////////////////////////
 
 
 
+// let testInp1 = lambdaVar "b"
+// let testInp2 = LambdaEx (Arithmetic (Variable (IdString "b"), Add, Variable (IdString "a")))
+// let testInp3 = LambdaEx (Arithmetic (Literal (Int 1), Add, Literal (Int 1)))
+// let testInp4 = LambdaEx (Arithmetic (Literal (Int 1), Subtract, Literal (Int 1)))
+// let testInp5 = LambdaEx (Arithmetic (Literal (Double 1.1), Subtract, Literal (Double 1.2)))
+// let testInp6 = LambdaEx (Arithmetic (Literal (String "Hello "), Add, Literal (String "World")))
+// let testInp7 = LambdaEx (Arithmetic (Literal (Double 1.1), Multiply, Literal (Double 1.2)))
 
-let environment = Map.ofList ["b", lambdaVar "c" ; ("a", lambdaVar "a")]
+
+// let testInp8 = LambdaEx (Comparison (Literal (Double 1.1), Lt, Literal (Double 1.2)))
+// let testInp9 = LambdaEx (Comparison (Literal (Double 1.1), Eq, Literal (Double 1.2)))
+// let testInp10 = LambdaEx (Comparison (Literal (String "Hey"), Eq, Literal (String "Hey")))
+
+
+
+
+// let environment = Map.ofList ["b", lambdaVar "c" ; ("a", lambdaVar "a")]
 
 // print <| eval environment testInp1
 // print <| eval environment testInp2
