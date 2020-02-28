@@ -88,7 +88,7 @@ type ParserBuilder() =
 
 let parser = ParserBuilder()
 
-// Token -> bool; token type checking functions -> a lot of unpacking
+// Token -> bool; token type checking functions used for unpacking annotation noise
 let isLiteral (tok: Token) =
     match tok with
     | TokLit _ -> true
