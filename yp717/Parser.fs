@@ -9,8 +9,8 @@ let print x = printfn "%A" x
 // Single Case D.U. used as a wrapper to create a type
 type Parser<'T> = P of (list<Token> -> int -> Option<'T * int>)
 
-// Basic building block *pToken*: Takes in a token list and a position in the token list index *i*
-// Returns either Some tuple of the token at *i* and the incremented *i* or None
+// Basic building block *pToken*: Takes in token list and index *i*; Returns either Some 
+// tuple of the token at *i* and the incremented *i* or None
 let pToken: Parser<Token> =
     P <| fun tokenList i ->
         if i < tokenList.Length then Some(tokenList.[i], i + 1) else None
@@ -19,7 +19,6 @@ let pToken: Parser<Token> =
 let pRun (P aParser) tokL = aParser tokL 0
 
 // Takes a *Token* and always returns Some tuple of *Token* and an unaltered index *i*
-// More generic types used to parse specific Token Types
 let pReturn tok: Parser<'T> = P <| fun t i -> Some(tok, i)
 
 // Takes unit and always returns None
@@ -37,7 +36,6 @@ let pBind (ufunc: 'T -> Parser<'U>) (P tparser): Parser<'U> =
             let (P uparser) = ufunc tvalue
             uparser tokenList newI
 
-// Given two parsers *uParser* and *tParser* combine them using *pbind* as follows:
 // Combines two parsers together
 let pCombine (uParser: Parser<'U>) (tParser: Parser<'T>): Parser<'U> = tParser |> pBind (fun _ -> uParser)
 
@@ -48,21 +46,20 @@ let pKeepRight uParser tParser = pCombine uParser tParser
 let pKeepLeft (uParser: Parser<'U>) (tParser: Parser<'T>): Parser<'T> =
     tParser |> pBind (fun tokenValue -> uParser |> pBind (fun _ -> pReturn tokenValue))
 
-// Takes a parser of a list of *tparser* and returns Some tuple of values
+// Takes parser of a list of *tparser* and returns Some tuple of values
 // and the index *i* at which the parser fails (if it does!)
 // Can be used to parse sequences of tokens
 let pMany (P t): Parser<'T list> =
-    P <| fun tokL pos ->
-        // define a tail recursive "loop" in a functional way
-        let rec loop vs currentPos =
-            match t tokL currentPos with
-            | None -> Some(List.rev vs, currentPos)
-            | Some(tvalue, tpos) -> loop (tvalue :: vs) tpos
-        loop [] pos // call the loop
+    P <| fun tokL index ->
+        // define tail recursive "loop"
+        let rec loop lst i =
+            match t tokL i with
+            | None -> Some(List.rev lst, i)
+            | Some(tokValue, tpos) -> loop (tokValue :: lst) tpos
+        loop [] index // call the loop
 
 // Similar to pMany but requires parsing success at least once
-// Note this is left associative
-// loop is tail recursive so optimised for F#
+// Note: is left associative and loop is tail recursive so optimised for F#
 let pChainlMin1 (term: Parser<'T>) (sep: Parser<'T -> 'T -> 'T>): Parser<'T> =
     let (P termfun) = term
     let (P sepfun) = sep
@@ -82,21 +79,16 @@ let pChainlMin1 (term: Parser<'T>) (sep: Parser<'T -> 'T -> 'T>): Parser<'T> =
 // Standard FP pattern using earlier defined building block functions
 type ParserBuilder() =
     class
-        // Enables let!
-        member x.Bind(t, uf) = pBind uf t
-        // Enables do!
-        member x.Combine(t, u) = pCombine u t
-        // Enables return
-        member x.Return v = pReturn v
-        // Enables return!
-        member x.ReturnFrom p: Parser<'T> = p
-        // allows if x then expr with no else
-        member x.Zero() = pReturn()
+        member x.Bind(t, uf) = pBind uf t // Enables let!
+        member x.Combine(t, u) = pCombine u t // Enables do!
+        member x.Return v = pReturn v // Enables return
+        member x.ReturnFrom p: Parser<'T> = p // Enables return!
+        member x.Zero() = pReturn() // allows if x then expr with no else
     end
 
 let parser = ParserBuilder()
 
-// Token -> bool; token type checking functions -> also sort of wasteful -> a lot of unpacking
+// Token -> bool; token type checking functions -> a lot of unpacking
 let isLiteral (tok: Token) =
     match tok with
     | TokLit _ -> true
@@ -122,65 +114,27 @@ let isBuiltInOp (tok: Token) =
     | TokBuiltInOp _ -> true
     | _ -> false
 
-let isWhiteSpace (tok: Token) =
-    match tok with
-    | TokWhitespace _ -> true
-    | _ -> false
-
-// Token -> bool; token type checking functions -> not a fan...these are very repetitive
-let getLiteral (tok: Token) =
-    match tok with
-    | TokLit(Bool x) -> (Bool x)
-    | TokLit(Int x) -> (Int x)
-    | TokLit(Double x) -> (Double x)
-    // | TokLit (String x) -> (String x)
-    | TokLit(Tuple(x, y)) -> (Tuple(x, y))
-    | _ -> failwith "Expected Literal but did not receive literal"
-
-let getIdentifier (tok: Token) =
-    match tok with
-    | TokIdentifier str -> str
-    | _ -> failwith "Expected Identifier but did not receive Identifier"
-
-let getBuiltInOp (tok: Token) =
-    match tok with
-    | TokBuiltInOp op -> op
-    | _ -> failwith "Expected BuiltInOp but did not receive BuiltInOp"
-
-let getOperator (tok: Token) =
-    match tok with
-    | TokSpecOp op -> op
-    | _ -> failwith "Expected Operator but did not receive Operator"
-
-let getWhiteSpace (tok: Token) =
-    match tok with
-    | TokWhitespace op -> op
-    | _ -> failwith "Expected white space but did not receive white space"
-
+// Parses token and if satisfy evaluates to true then returns token, else returns fail
 let pSatisfy (satisfy: Token -> bool): Parser<Token> =
     parser {
         let! tok = pToken
         if satisfy tok then return tok else return! pFail()
     }
 
-let pLiteral = pSatisfy isLiteral
-let pUnaryOp = pSatisfy isUnaryOp
-let pStartOp = pSatisfy isOperator
-let pIdentifier = pSatisfy isIdentifier
-let pWhitespace = pSatisfy isWhiteSpace
-
 // Takes a mapping function that maps a type T to type U and a parser of T
 let pMap mappingFunc tParser =
     parser {
         let! tokenType = tParser
-        return mappingFunc tokenType }
+        return mappingFunc tokenType     
+    }
 
 // Combines two parsers into a Parser of a Pair
 let pPair uParser tParser =
     parser {
         let! first = tParser
         let! second = uParser
-        return first, second }
+        return first, second 
+    }
 
 // Combines two parsers such that if uParser fails it tries tParser
 let pOrElse (P uParser) (P tParser) =
@@ -198,7 +152,6 @@ let pAnd (P uParser) (P tParser) =
 
 // Define combinators: using static member to attach methods specifically to Parser type
 // *member* keyword shows that this is a member function (i.e. a method)
-// Technically OOP approach but cleaner and combinators only needed specifically for Parsers here
 // After this we can express parsers using combinators to make things even more readable!
 type Parser<'T> with
     static member (>>=) (t, uf) = pBind uf t
@@ -214,10 +167,10 @@ let pManyMin1 tparser =
     parser {
         let! head = tparser
         let! tail = pMany tparser
-        return head :: tail }
+        return head :: tail 
+    }
 
 // Skips a specific token given as input
-
 let pSkipToken tok =
     parser {
         let! token = pToken
@@ -225,25 +178,37 @@ let pSkipToken tok =
     }
     
 // Up to here we defined basic parsers and parser combinators and now we will work on defining the language grammar
-// Get AST Type from BuiltIn Operator
-let pBuiltInFunc = pSatisfy isBuiltInOp |>> getBuiltInOp |>> BuiltInFunc
-// Get AST Type from Literal (Const)
-let pConst = pLiteral |>> getLiteral |>> Const
-// Get AST Type from Identifier, which is used to identify variables (Var)
-let pVariable = pIdentifier |>> getIdentifier |>> Var
-// a single term in an expression is either a constant or a variable
+// Get AST Type from BuiltIn Operator, Literal (Const), Identifier (Var), Special Operators
+let pBuiltInFunc = pSatisfy isBuiltInOp |>> fun tok ->
+    match tok with
+    | TokBuiltInOp op -> op |> BuiltInFunc
+    | _ -> failwith "Expected BuiltInOp but did not receive BuiltInOp"
+
+let pConst = pSatisfy isLiteral |>> fun tok ->
+    match tok with
+    | TokLit(Bool x) -> (Bool x) |> Const
+    | TokLit(Int x) -> (Int x) |> Const
+    | TokLit(Double x) -> (Double x) |> Const
+    | TokLit (String x) -> (String x) |> Const
+    | TokLit(Tuple(x, y)) -> (Tuple(x, y)) |> Const
+    | _ -> failwith "Expected Literal but did not receive literal"
+
+let pVariable = pSatisfy isIdentifier |>> fun tok ->
+    match tok with
+    | TokIdentifier str -> str |> Var
+    | _ -> failwith "Expected Identifier but did not receive Identifier"
+
+let pSpecOp = pSatisfy isOperator |>> fun tok -> 
+        match tok with
+        | TokSpecOp op -> op
+        | _ -> failwith "Expected Operator but did not receive Operator"
+
+// Single term in expression is either constant or variable
 let pTerm = pConst <|> pVariable
 
-// pOp Skips the operator and builds an AST with the operator in the right place
+// pOp Skips the operator and builds an FuncApp AST
 let pOp opTok operator =
     pSkipToken opTok |>> fun c leftTree rightTree -> FuncApp(FuncApp((BuiltInFunc operator), leftTree), rightTree)
-
-// x+1*(3+2)
-
-let pSpecOp = pSatisfy isOperator |>> getOperator
-
-// Define parser for BuiltInFuncTypes
-// add left right
 
 let pAdd = pOp (TokBuiltInOp ADD) ADD
 let pSubtract = pOp (TokBuiltInOp SUBTRACT) SUBTRACT
@@ -266,54 +231,38 @@ let pchainAddSubtract = pChainlMin1 pchainMultiDivide paddOrSubtract
 let pCompOps = pLessThan <|> pLessThanOrEq <|> pGreaterThan <|> pGreaterThanOrEq <|> pEqualTo
 let pChainCompOps = pChainlMin1 pTerm pCompOps
 
+// Top level chained Function application parser with operator precedence integrated
 let pChainedFuncApps = pChainlMin1 pchainAddSubtract pCompOps
 
-let var = pMany (pSkipToken (TokWhitespace(Space)))
-
-let ignoreList =
-    let reducer list =
-        match list with
-        | [] -> ()
-        | lst -> lst |> List.reduce (fun a b -> ())
-    pMap reducer
-
-let pSkipToken' tok = pMany (pSkipToken (tok)) |> ignoreList
-let pSkipTokenMin1' tok = pManyMin1 (pSkipToken (tok)) |> ignoreList
-
+// Top Level AST parser: called with pRun
 let rec pExpr =
     let pFuncDefExp, pFuncDefExpRec =
         let p keyword f =
             parser {
                 do! pSkipToken (TokSpecOp keyword)
-                do! pSkipToken' (TokWhitespace(Space))
                 let! (Var id) = pVariable
-                do! pSkipToken' (TokWhitespace(Space))
                 let! value = pMany pVariable
                 do! pSkipToken (TokSpecOp EQUALS)
-                do! pSkipToken' (TokWhitespace(Space))
                 let! body = pExpr
                 return f (id, value, body)
             }
         p LET FuncDefExp, p LETREC FuncDefExpRec
 
-    let parseLambda =
-        parser {
-            do! pSkipToken (TokSpecOp LAMBDA)
-            do! pSkipToken' (TokWhitespace(Space))
-            let! arg = pExpr
-            do! pSkipToken (TokSpecOp ARROWFUNC)
-            let! body = pExpr
-            return Lambda(arg, body)
-        }
-
-    // This is working yay
     let pBracketed =
         parser {
-            do! pSkipToken' (TokWhitespace(Space))
             do! pSkipToken (TokSpecOp LRB)
             let! e = pExpr
             do! pSkipToken (TokSpecOp RRB)
             return e
+        }
+
+    let parseLambda =
+        parser {
+            do! pSkipToken (TokSpecOp LAMBDA)
+            let! arg = pExpr
+            do! pSkipToken (TokSpecOp ARROWFUNC)
+            let! body = pExpr
+            return Lambda(arg, body)
         }
 
     let pFuncApp =
@@ -327,19 +276,14 @@ let rec pExpr =
 
     let pIfThenElse =
         parser {
-            let body = pChainedFuncApps <|> pBracketed <|> pVariable <|> pConst
-            do! pSkipToken' (TokWhitespace(Space))
+            let pBody = pChainedFuncApps <|> pBracketed <|> pVariable <|> pConst
             do! pSkipToken (TokSpecOp IF)
             let! condition = pVariable <|> pBracketed
-            do! pSkipToken' (TokWhitespace(Space))
             do! pSkipToken (TokSpecOp THEN) 
-            let! ifTrue = body
-            do! pSkipToken' (TokWhitespace(Space))
+            let! ifTrue = pBody
             do! pSkipToken (TokSpecOp ELSE)
-            let! ifFalse = body
+            let! ifFalse = pBody
             return Conditional(condition, ifTrue, ifFalse)
         }
 
     pFuncDefExp <|> pFuncDefExpRec <|> parseLambda <|> pIfThenElse <|> pFuncApp <|> pBracketed <|> pChainedFuncApps <|> pVariable <|> pConst 
-
-

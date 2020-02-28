@@ -3,10 +3,7 @@ module Testing
 open Common
 open Parser
 open Expecto
-// open FSCheck
     
-// pRun pExpr inp7 |> printf "%A"
-
 // 5 + 10
 let tokenInput1 = [TokLit (Int 5); TokBuiltInOp ADD; TokLit (Int 10)]
 let expParseOutput1 = Some(FuncApp(FuncApp (BuiltInFunc ADD, Const (Int 5)), Const (Int 10)), 3)
@@ -17,11 +14,11 @@ let expParseOutput2 = Some(FuncApp(FuncApp(BuiltInFunc ADD, FuncApp (FuncApp (Bu
 
 // 5
 let tokenInput3 = [TokLit (Int 5)]
-let expParseOutput3 = Some(Const (Int 5),1) // null
+let expParseOutput3 = Some(Const (Int 5),1)
 
 // let f x = if(x <= 10) then x else x + 1
-let tokenInput4 = [TokSpecOp LET; TokWhitespace (Space); TokIdentifier (IDString "f"); TokWhitespace (Space); TokIdentifier (IDString "x"); TokSpecOp EQUALS; TokWhitespace (Space);TokSpecOp IF; TokSpecOp LRB; TokIdentifier (IDString "x"); TokBuiltInOp LE; TokLit (Int 10); TokSpecOp RRB; TokSpecOp THEN; TokIdentifier (IDString "x"); TokSpecOp ELSE; TokIdentifier (IDString "x"); TokBuiltInOp ADD; TokLit (Int 1)] 
-let expParseOutput4 = Some(FuncDefExp(IDString "f",[Var (IDString "x")], Conditional(FuncApp (FuncApp (BuiltInFunc LE,Var (IDString "x")),Const (Int 10)), Var (IDString "x"), FuncApp (FuncApp (BuiltInFunc ADD, Var (IDString "x")), Const (Int 1)))), 19)
+let tokenInput4 = [TokSpecOp LET; TokIdentifier (IDString "f"); TokIdentifier (IDString "x"); TokSpecOp EQUALS; TokSpecOp IF; TokSpecOp LRB; TokIdentifier (IDString "x"); TokBuiltInOp LE; TokLit (Int 10); TokSpecOp RRB; TokSpecOp THEN; TokIdentifier (IDString "x"); TokSpecOp ELSE; TokIdentifier (IDString "x"); TokBuiltInOp ADD; TokLit (Int 1)] 
+let expParseOutput4 = Some(FuncDefExp(IDString "f",[Var (IDString "x")], Conditional(FuncApp (FuncApp (BuiltInFunc LE,Var (IDString "x")),Const (Int 10)), Var (IDString "x"), FuncApp (FuncApp (BuiltInFunc ADD, Var (IDString "x")), Const (Int 1)))), 16)
 
 // 5 + 10
 let tokenInput5 = [TokSpecOp IF; TokSpecOp LRB; TokLit (Int 6); TokBuiltInOp LE; TokLit (Int 10); TokSpecOp RRB; TokSpecOp THEN; TokLit (Int 5); TokSpecOp ELSE; TokLit (Int 6)]
@@ -108,3 +105,7 @@ let parserTestListWithExpecto =
 
 let parserTestsWithExpecto() =
     runTests defaultConfig parserTestListWithExpecto |> ignore
+
+// Property based testing could be used to check whether operator precedence is working
+// i.e. addition is commutative
+// product is distributive over addition

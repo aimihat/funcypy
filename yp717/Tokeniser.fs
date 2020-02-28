@@ -1,3 +1,0 @@
-module Tokeniser
-
-open System
