@@ -88,7 +88,7 @@ type ParserBuilder() =
 
 let parser = ParserBuilder()
 
-// Token -> bool; token type checking functions -> also sort of wasteful -> a lot of unpacking
+// Token -> bool; token type checking functions -> a lot of unpacking
 let isLiteral (tok: Token) =
     match tok with
     | TokLit _ -> true
@@ -113,32 +113,6 @@ let isBuiltInOp (tok: Token) =
     match tok with
     | TokBuiltInOp _ -> true
     | _ -> false
-
-// Token -> bool: Series of getter functions that get the token and fail with a specific message if 
-// they don't get the token they expect
-let getLiteral (tok: Token) =
-    match tok with
-    | TokLit(Bool x) -> (Bool x)
-    | TokLit(Int x) -> (Int x)
-    | TokLit(Double x) -> (Double x)
-    | TokLit (String x) -> (String x)
-    | TokLit(Tuple(x, y)) -> (Tuple(x, y))
-    | _ -> failwith "Expected Literal but did not receive literal"
-
-let getIdentifier (tok: Token) =
-    match tok with
-    | TokIdentifier str -> str
-    | _ -> failwith "Expected Identifier but did not receive Identifier"
-
-let getBuiltInOp (tok: Token) =
-    match tok with
-    | TokBuiltInOp op -> op
-    | _ -> failwith "Expected BuiltInOp but did not receive BuiltInOp"
-
-let getOperator (tok: Token) =
-    match tok with
-    | TokSpecOp op -> op
-    | _ -> failwith "Expected Operator but did not receive Operator"
 
 // Parses token and if satisfy evaluates to true then returns token, else returns fail
 let pSatisfy (satisfy: Token -> bool): Parser<Token> =
@@ -205,10 +179,29 @@ let pSkipToken tok =
     
 // Up to here we defined basic parsers and parser combinators and now we will work on defining the language grammar
 // Get AST Type from BuiltIn Operator, Literal (Const), Identifier (Var), Special Operators
-let pBuiltInFunc = pSatisfy isBuiltInOp |>> getBuiltInOp |>> BuiltInFunc
-let pConst = pSatisfy isLiteral |>> getLiteral |>> Const
-let pVariable = pSatisfy isIdentifier |>> getIdentifier |>> Var
-let pSpecOp = pSatisfy isOperator |>> getOperator
+let pBuiltInFunc = pSatisfy isBuiltInOp |>> fun tok ->
+    match tok with
+    | TokBuiltInOp op -> op |> BuiltInFunc
+    | _ -> failwith "Expected BuiltInOp but did not receive BuiltInOp"
+
+let pConst = pSatisfy isLiteral |>> fun tok ->
+    match tok with
+    | TokLit(Bool x) -> (Bool x) |> Const
+    | TokLit(Int x) -> (Int x) |> Const
+    | TokLit(Double x) -> (Double x) |> Const
+    | TokLit (String x) -> (String x) |> Const
+    | TokLit(Tuple(x, y)) -> (Tuple(x, y)) |> Const
+    | _ -> failwith "Expected Literal but did not receive literal"
+
+let pVariable = pSatisfy isIdentifier |>> fun tok ->
+    match tok with
+    | TokIdentifier str -> str |> Var
+    | _ -> failwith "Expected Identifier but did not receive Identifier"
+
+let pSpecOp = pSatisfy isOperator |>> fun tok -> 
+        match tok with
+        | TokSpecOp op -> op
+        | _ -> failwith "Expected Operator but did not receive Operator"
 
 // Single term in expression is either constant or variable
 let pTerm = pConst <|> pVariable
@@ -240,14 +233,6 @@ let pChainCompOps = pChainlMin1 pTerm pCompOps
 
 // Top level chained Function application parser with operator precedence integrated
 let pChainedFuncApps = pChainlMin1 pchainAddSubtract pCompOps
-
-// Helper function: converts parser of unit list to parser of unit
-let ignoreList =
-    let reducer list =
-        match list with
-        | [] -> ()
-        | lst -> lst |> List.reduce (fun a b -> ())
-    pMap reducer
 
 // Top Level AST parser: called with pRun
 let rec pExpr =
@@ -291,13 +276,13 @@ let rec pExpr =
 
     let pIfThenElse =
         parser {
-            let body = pChainedFuncApps <|> pBracketed <|> pVariable <|> pConst
+            let pBody = pChainedFuncApps <|> pBracketed <|> pVariable <|> pConst
             do! pSkipToken (TokSpecOp IF)
             let! condition = pVariable <|> pBracketed
             do! pSkipToken (TokSpecOp THEN) 
-            let! ifTrue = body
+            let! ifTrue = pBody
             do! pSkipToken (TokSpecOp ELSE)
-            let! ifFalse = body
+            let! ifFalse = pBody
             return Conditional(condition, ifTrue, ifFalse)
         }
 
