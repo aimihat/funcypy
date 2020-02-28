@@ -1,8 +1,7 @@
 module Combinator_runtime
 
-open System
-open System.Linq.Expressions
 open Helper
+open PAPHelpers
 
 // Following L4 slides 16/17
 // Bracket Abstraction implemented with the two functions below
@@ -11,7 +10,7 @@ let rec Abstract tree =
         match E with
         | Variable x when var = x -> Combinator I
         | Call(E1, E2) -> Call(Call(Combinator S, BracketAbstract var E1), BracketAbstract var E2)
-        | Function(_, _, _)
+        | Lambda(_, _)
         | FuncDefExp(_, _, _) -> failwithf "BA001: Shouldn't happen! (%A)" E
         | other -> Call(Combinator K, other)
 
@@ -19,68 +18,51 @@ let rec Abstract tree =
     // Call or Function
     | Call(E1, E2) -> Call(Abstract E1, Abstract E2)
     | Pair(E1, E2) -> Pair(E1, E2)
-    | Function(_, v, body) -> BracketAbstract v <| Abstract body
+    | Lambda(v, body) -> BracketAbstract v <| Abstract body
     // neither Call nor Function
-    | Literal x -> Literal x
-    | BuiltInFunc B -> BuiltInFunc B
-    | Combinator C -> Combinator C
-    | Variable x -> Variable x
-    | Null -> Null
+    | CONSTORVAR x -> x
     | FuncDefExp(_, _, _) -> failwithf "BA002: Shouldn't happen! (%A)" tree
 
-let rec InlineDefs tree = // TODO: check if TC finds this ok
+
+// Substituting func/var definitions in final expression.
+let rec InlineDefs tree =
     let rec Substitute var body E =
         match E with
         | Call(E1, E2) -> Call(Substitute var body E1, Substitute var body E2)
         | Pair(E1, E2) -> Pair(Substitute var body E1, Substitute var body E2)
         | Variable x when x = var -> body
-        | Variable x -> Variable x
-        | Literal x -> Literal x
-        | BuiltInFunc B -> BuiltInFunc B
-        | Combinator C -> Combinator C
-        | Null -> Null
-        | Function(name, v, exp) when v = var -> Function(name, v, exp)
-        | Function(name, v, exp) -> Function(name, v, Substitute var body exp)
+        | CONSTORVAR x -> x
+        | Lambda(v, exp) when v = var -> Lambda(v, exp)
+        | Lambda(v, exp) -> Lambda(v, Substitute var body exp)
         | FuncDefExp(_, _, _) -> failwithf "ILD001: Shouldn't happen! (%A)" E
 
     match tree with
     | FuncDefExp(v, body, exp) -> Substitute v <| InlineDefs body <| InlineDefs exp
     | Call(E1, E2) -> Call(InlineDefs E1, InlineDefs E2)
     | Pair(E1, E2) -> Pair(InlineDefs E1, InlineDefs E2)
-    | Variable x -> Variable x
-    | Function(name, v, body) -> Function(name, v, InlineDefs body)
-    | Literal x -> Literal x
-    | Null -> Null
-    | BuiltInFunc B -> BuiltInFunc B
-    | Combinator C -> Combinator C
+    | Lambda(v, body) -> Lambda(v, InlineDefs body)
+    | CONSTORVAR x -> x
 
-//Repeat in a tail recusrive function until at top level the function has not enough arguments for its reduction rule, or until you have just a literal.
+
+// Recursively evaluate AST with built-in combinators and functions
 let rec Eval(tree: Ast): Ast =
-    //    match EvaluationMemo.TryGetValue tree with
-    //    | true, result -> result
-    //    | false, _ ->
     let (|BuiltinCombinator|_|) node =
         match node with
         | Call(Combinator I, E)
         | Call(Call(Combinator K, E), _) ->
             Eval E |> Some
         | Call(Combinator Y, E) ->
-            let E' = Eval E 
-            Call(E', Call(Combinator Y, E'))
-            |> Eval
-            |> Some
+            Call(E, Call(Combinator Y, E))
+            |> Eval |> Some
         | Call(Call(Call(Combinator S, f), g), x) ->
-            let x' = Eval x
-            Call(Call(Eval f, x') |> Eval, Call(Eval g, x') |> Eval)
-            |> Eval
-            |> Some
+            Call(Call(f, x) |> Eval, Call(g, x) |> Eval)
+            |> Eval |> Some
         | _ -> None
 
     let (|BuiltinArithm|_|) node =
         match node with
         | Call(Call(BuiltInFunc(Arithmetic op), x), y) ->
-            let x' = Eval x
-            let y' = Eval y
+            let x', y' = Eval x, Eval y
             match x', y' with
             | INT n, INT m ->
                 match op with
@@ -95,74 +77,66 @@ let rec Eval(tree: Ast): Ast =
                 | Divide -> Double(n / m)
                 | Multiply -> Double(n * m)
             | STR s1, STR s2 when op = Add -> String(s1 + s2)
-            | _ -> failwithf "Tried calling %A on %A, %A" op x' y' // TODO: check if x'/y' fully reduced here
-            |> Literal
-            |> Some
+            | _ -> failwithf "Tried calling %A on %A, %A" op x' y'
+            |> Literal |> Some
         | _ -> None
 
     let (|BuiltinIfThenElse|_|) node =
         match node with
         | Call(Call(Call(BuiltInFunc IfThenElse, cond), then_br), else_br) ->
             let cond' = Eval cond
-            let then' = Eval then_br
-            let else' = Eval else_br
             match cond' with
-            | BOOL c ->
-                if c then then'
-                else else'
-            | NUM n ->
-                if n <> 0.0 then then'
-                else else'
-            | _ ->
-                failwithf "Tried calling if statement with condition: %A"
-                    cond' // TODO: check if x'/y' fully reduced here
-            |> Some
+            | BOOL c when c = true -> then_br
+            | NUM n when n <> 0.0 -> then_br
+            | NUM _ | BOOL _ -> else_br
+            | _ -> failwithf "Tried calling if statement with condition: %A" cond' 
+            |> Eval |> Some
         | _ -> None
 
     let (|BuiltinListFuncs|_|) node =
         match node with
-        | Call(BuiltInFunc(List IsEmpty), lst) ->
+        | Call(Call(BuiltInFunc(ListF P), A), B) ->
+            Pair(A, Pair(B, Null)) |> Eval |> Some // I'm aware this is not the same type as on website
+        | Call(BuiltInFunc(ListF IsEmpty), lst) ->
             match Eval lst with
             | Pair(E1, E2) ->
-                let isempty = (E1 = Null) && (E2 = Null)
-                Some <| Literal(Bool isempty)
+                ((E1 = Null) && (E2 = Null))
+                |> Bool |> Literal |> Some
             | E -> failwithf "Tried calling IsEmpty on: %A" E
-        | Call(BuiltInFunc(List Head), lst) ->
+        | Call(BuiltInFunc(ListF IsList), lst) ->
+            match Eval lst with
+            | Pair(_, _) -> Bool true
+            | _ -> Bool false
+            |> Literal |> Some
+        | Call(BuiltInFunc(ListF Head), lst) ->
             match Eval lst with
             | Pair(E, _) when E <> Null -> Some E
             | E -> failwithf "Tried calling Head on: %A" E
-        | Call(BuiltInFunc(List Tail), lst) ->
+        | Call(BuiltInFunc(ListF Tail), lst) ->
             match Eval lst with
             | Pair(_, E) when E <> Null -> Some E
             | E -> failwithf "Tried calling Tail on: %A" E
-        | Call(BuiltInFunc(List ImplodeString), lst) ->
+        | Call(BuiltInFunc(ListF ImplodeString), lst) ->
             let lst' = Eval lst
-
             let rec implode p = // better if implemented in the language with list reduction
                 match p with
                 | Pair(Literal(String s), Null) -> s
                 | Pair(Literal(String s), tail) -> s + implode tail
                 | _ -> failwithf "Tried calling implode on: %A" lst'
             Some <| Literal(String(implode lst'))
-        | Call(BuiltInFunc(List ExplodeString), str) ->
+        | Call(BuiltInFunc(ListF ExplodeString), str) ->
             match Eval str with
             | Literal(String s) ->
                 Seq.toList s
-                |> List.map (fun i ->
-                    Literal
-                        (i
-                         |> string
-                         |> String))
-                |> ListFromPairs
-                |> Some
+                |> List.map (fun i -> Literal (i |> string |> String))
+                |> ListFromPairs |> Some
             | E -> failwithf "Tried calling explode on: %A" E
         | _ -> None
 
     let (|BuiltinComparison|_|) node =
         match node with
         | Call(Call(BuiltInFunc(Comparison op), x), y) ->
-            let x' = Eval x
-            let y' = Eval y
+            let x', y' = Eval x, Eval y
             match op, x', y' with
             // = and != apply to all types.
             | Eq, n, m -> Bool(n = m)
@@ -173,31 +147,20 @@ let rec Eval(tree: Ast): Ast =
             | Le, NUM n, NUM m -> Bool(n <= m)
             | Ge, NUM n, NUM m -> Bool(n >= m)
             | _ -> failwithf "Tried calling %A on %A, %A" op x' y' // TODO: check if x'/y' fully reduced here
-            |> Literal
-            |> Some
+            |> Literal |> Some
         | _ -> None
 
-    let result =
-        match tree with
-        | BuiltinArithm result
-        | BuiltinComparison result
-        | BuiltinIfThenElse result
-        | BuiltinCombinator result
-        | BuiltinListFuncs result -> result
-        | Literal x -> Literal x
-        | BuiltInFunc B -> BuiltInFunc B
-        | Combinator C -> Combinator C
-        | Null -> Null
-        | Variable x -> Variable x
-        | Pair(E1, E2) -> Pair(Eval E1, Eval E2)
-        | Call(E1, E2) ->
-            Call(Eval E1, Eval E2) //returns call with eval params, no builtin could process it
-        | Function(_, _, _)
-        | FuncDefExp(_, _, _) -> failwithf "EVA001: Shouldn't happen! (%A)" tree
-
-    //        printf "%A\n" result
-    //        EvaluationMemo.Add(tree, result) // Memoise result
-    result
+    match tree with
+    | BuiltinArithm result
+    | BuiltinComparison result
+    | BuiltinIfThenElse result
+    | BuiltinCombinator result
+    | BuiltinListFuncs result
+    | CONSTORVAR result -> result
+    | Pair(E1, E2) -> Pair(Eval E1, Eval E2)
+    | Call(E1, E2) -> Call(Eval E1, Eval E2)
+    | Lambda(_, _)
+    | FuncDefExp(_, _, _) -> failwithf "EVA001: Shouldn't happen! (%A)" tree
 
 
 let Interpret tree =
@@ -211,10 +174,10 @@ let fact =
     Call
         (Call
             (Combinator Y,
-             Function
-                 (None, "fact",
-                  Function
-                      (None, "n",
+             Lambda
+                 ("fact",
+                  Lambda
+                      ("n",
                        Call
                            (Call
                                (Call(BuiltInFunc IfThenElse, Variable "n"),
@@ -224,6 +187,3 @@ let fact =
                                          (Variable "fact",
                                           Call(Call(BuiltInFunc(Arithmetic Subtract), Variable "n"), Literal(Int 1))))),
                             Literal(Int 1))))), Literal(Int 5))
-// Convert AST
-//printf "%A" <| PrintTree fact 
-//let actual = (Interpret <| fact)

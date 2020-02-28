@@ -15,21 +15,21 @@ let expectoConfig = { defaultConfig with verbosity = Logging.LogLevel.Debug }
 let abstract_tests =
     testList "Basic tests of Bracket Abstraction"
         [ test "Test1 Single-var" {
-              let InputAst = Function(None, "g", Call(Variable "g", Combinator I))
+              let InputAst = Lambda("g", Call(Variable "g", Combinator I))
               let expected = Call(Call(Combinator S, Combinator I), Call(Combinator K, Combinator I))
               let actual = Abstract InputAst
               Expect.equal actual expected (PrintTree actual + " != " + PrintTree expected)
           }
 
           test "Test3 Single-var" {
-              let InputAst = Function(None, "g", Combinator I)
+              let InputAst = Lambda("g", Combinator I)
               let expected = Call(Combinator K, Combinator I)
               let actual = Abstract InputAst
               Expect.equal actual expected (PrintTree actual + " != " + PrintTree expected)
           }
 
           test "Test1 Multi-var" {
-              let InputAst = Function(None, "g", Combinator I)
+              let InputAst = Lambda("g", Combinator I)
               let expected = Call(Combinator K, Combinator I)
               let actual = Abstract InputAst
               Expect.equal actual expected (PrintTree actual + " != " + PrintTree expected)
@@ -45,7 +45,7 @@ let abstract_tests =
 
            let rec containsLambda tree =
                match tree with
-               | Function(_, _, _) -> true
+               | Lambda(_, _) -> true
                | Call(E1, E2) -> containsLambda E1 || containsLambda E2
                | FuncDefExp(var, body, exp) -> containsLambda body || containsLambda exp
                | E -> false
@@ -55,17 +55,17 @@ let abstract_tests =
 //let print_tests =
 //  testList "Test printTree function" [
 //    test "Test Raw AST 1" {
-//      let InputAst = Function(None, "g", Call(Expression (Variable "g"), Expression (Variable "f")))
+//      let InputAst = Function("g", Call(Expression (Variable "g"), Expression (Variable "f")))
 //      let expected = "(λg.(g f))"
 //      Expect.equal (printTree InputAst) expected "Test Raw AST 1"
 //    }
 //    test "Test Raw AST 2" {
-//      let InputAst = Call(Function(None, "g", Call(Expression (Variable "g"), Expression (Variable "f"))), Expression(Variable "w"))
+//      let InputAst = Call(Function("g", Call(Expression (Variable "g"), Expression (Variable "f"))), Expression(Variable "w"))
 //      let expected = "((λg.(g f)) w)"
 //      Expect.equal (printTree InputAst) expected "Test Raw AST 2"
 //    }
 //    test "Test Combinator AST 1" {
-//      let InputAst = Function(None, "f", Call(Call(Combinator S, Combinator I), Call(Combinator K, Expression(Variable "f"))))
+//      let InputAst = Function("f", Call(Call(Combinator S, Combinator I), Call(Combinator K, Expression(Variable "f"))))
 //      let expected = "(λf.((S I) (K f)))"
 //      Expect.equal (printTree InputAst) expected "Test Combinator AST 1"
 //    }
@@ -151,7 +151,7 @@ let eval_tests =
 
                let InputAst =
                    Call
-                       (Function(None, "f", Call(Call(BuiltInFunc(Arithmetic op), Variable "f"), Literal(Int b))),
+                       (Lambda("f", Call(Call(BuiltInFunc(Arithmetic op), Variable "f"), Literal(Int b))),
                         Literal(Int c)) //(λf.f+2) 2
                let expected = Literal(Int(Option.get (opMap.TryFind op) c b))
                (Interpret <| InputAst) = expected))
@@ -163,10 +163,10 @@ let eval_tests =
 
            let AST =
                Call
-                   (Function
-                       (None, "f",
+                   (Lambda
+                       ("f",
                         Call
-                            (Function(None, "g", Call(Call(BuiltInFunc(Comparison op), Variable("f")), Variable("g"))),
+                            (Lambda("g", Call(Call(BuiltInFunc(Comparison op), Variable("f")), Variable("g"))),
                              Literal(Bool a))), Literal(Bool b))
            let expected = Literal(Bool(operator a b))
            (Interpret <| AST) = expected))
@@ -194,8 +194,8 @@ let eval_tests =
           testProperty "(λx.y=x, x+y) a" <| (fun (a: int) ->
           (let AST =
               Call
-                  (Function
-                      (None, "x",
+                  (Lambda
+                      ("x",
                        FuncDefExp
                            ("y", Variable "x", Call(Call(BuiltInFunc(Arithmetic Add), Variable "x"), Variable "y"))),
                    Literal(Int a))
@@ -204,8 +204,8 @@ let eval_tests =
           testProperty "(λx.(if x then a else b)) c:bool" <| (fun (a: CombinatorType) (b: CombinatorType) (c: bool) ->
           (let AST =
               Call
-                  (Function
-                      (None, "x", Call(Call(Call(BuiltInFunc IfThenElse, Variable "x"), Combinator a), Combinator b)),
+                  (Lambda
+                      ("x", Call(Call(Call(BuiltInFunc IfThenElse, Variable "x"), Combinator a), Combinator b)),
                    Literal(Bool(c)))
            (Interpret <| AST) =
                if c then Combinator a
@@ -214,8 +214,8 @@ let eval_tests =
           testProperty "(λx.(if x then a else b)) c:int" <| (fun (a: CombinatorType) (b: CombinatorType) (c: int) ->
           (let AST =
               Call
-                  (Function
-                      (None, "x", Call(Call(Call(BuiltInFunc IfThenElse, Variable "x"), Combinator a), Combinator b)),
+                  (Lambda
+                      ("x", Call(Call(Call(BuiltInFunc IfThenElse, Variable "x"), Combinator a), Combinator b)),
                    Literal(Int(c)))
            (Interpret <| AST) =
                if c <> 0 then Combinator a
@@ -224,8 +224,8 @@ let eval_tests =
           testProperty "(λx.(if x then a else b)) c:double" <| (fun (a: CombinatorType) (b: CombinatorType) (c: NormalFloat) ->
           (let AST =
               Call
-                  (Function
-                      (None, "x", Call(Call(Call(BuiltInFunc IfThenElse, Variable "x"), Combinator a), Combinator b)),
+                  (Lambda
+                      ("x", Call(Call(Call(BuiltInFunc IfThenElse, Variable "x"), Combinator a), Combinator b)),
                    Literal(Double(c.Get)))
            (Interpret <| AST) =
                if c.Get <> 0.0 then Combinator a
@@ -236,54 +236,78 @@ let eval_tests =
           testProperty "implode [a, b, c]" <| (fun (a: string) (b: string) (c: string) ->
           (let AST =
               Call
-                  (BuiltInFunc(List ImplodeString),
+                  (BuiltInFunc(ListF ImplodeString),
                    Pair(Literal(String a), Pair(Literal(String b), Pair(Literal(String c), Null))))
            (Interpret <| AST) = Literal(String(a + b + c))))
+          
+          test "head [1+1,2] = 2" {
+              let AST = Call(BuiltInFunc (ListF Head), Pair(Call(Call(BuiltInFunc (Arithmetic Add), Literal (Int 4)), Literal (Int 2)), Literal (Int 2)))
+              let actual = (Interpret <| AST)
+              Expect.equal actual (Literal(Int 6)) (PrintTree actual + " != 6")
+          }
+          
+          test "P (1+1) 3 != [2,3]" {
+              let AST = Call(Call(BuiltInFunc (ListF P), Call(Call(BuiltInFunc (Arithmetic Add), Literal(Int 1)), Literal(Int 1))), Literal(Int 3))
+              let actual = (Interpret <| AST)
+              Expect.equal actual ( Pair (Literal (Int 2),Pair (Literal (Int 3),Null))) (PrintTree actual + " != [2,3]")
+          }
+          
           testProperty "head ([ast,ast,...])" <| (fun (l: Value list) ->
-          (let list = l @ [ Int 1 ] |> List.map (fun i -> Literal i)
-           let AST = Call(BuiltInFunc(List Head), ListFromPairs list)
+          (let list = l @ [ Int 1 ] |> List.filter (function | Double x -> not (Double.IsNaN x) | _ -> true) |> List.map (fun i -> Literal i)
+           let AST = Call(BuiltInFunc(ListF Head), ListFromPairs list)
            (Interpret <| AST) = list.[0]))
+          
           test "tail ([1,2,3])" {
-
               let AST =
-                  Call(BuiltInFunc(List Tail), Pair(Literal(Int 1), Pair(Literal(Int 2), Pair(Literal(Int 2), Null))))
+                  Call(BuiltInFunc(ListF Tail), Pair(Literal(Int 1), Pair(Literal(Int 2), Pair(Literal(Int 2), Null))))
               let actual = (Interpret <| AST)
               Expect.equal actual (Pair(Literal(Int 2), Pair(Literal(Int 2), Null))) (PrintTree actual + " != [2,3]")
           }
-
-          test "5!" {
-              let fact =
-                  FuncDefExp
-                      ("fact'",
-                       Call(Combinator Y, Function(None, "fact", Function
-                           (None, "n",
-                            Call
-                                (Call
-                                    (Call(BuiltInFunc IfThenElse, Variable "n"),
-                                     Call
-                                         (Call(BuiltInFunc(Arithmetic Multiply), Variable "n"),
-                                          Call
-                                              (Variable "fact",
-                                               Call(Call(BuiltInFunc(Arithmetic Subtract), Variable "n"), Literal(Int 1))))), Literal(Int 1))))),
-                           Call(Variable "fact'", Literal(Int 5)))
-              // Convert AST
-              let actual = (Interpret <| fact)
-              Expect.equal actual (Literal(Int 120)) (PrintTree actual + " != 120")
+          
+          test "islist [1,2]" {
+              let AST = Call(BuiltInFunc (ListF IsList), Pair(Literal (Int 1), Literal (Int 2)))
+              let actual = (Interpret <| AST)
+              Expect.equal actual (Literal(Bool true)) (PrintTree actual + " != true")
           }
+          
+          testProperty "islist val = false" <| (fun (s: Value) ->
+          (let AST = Call(BuiltInFunc (ListF IsList), Literal s)
+           (Interpret <| AST) = Literal(Bool false)))
+
+
+//          test "5!" {
+//              let fact =
+//                  FuncDefExp
+//                      ("fact'",
+//                       Call(Combinator Y, Function("fact", Function
+//                           ("n",
+//                            Call
+//                                (Call
+//                                    (Call(BuiltInFunc IfThenElse, Variable "n"),
+//                                     Call
+//                                         (Call(BuiltInFunc(Arithmetic Multiply), Variable "n"),
+//                                          Call
+//                                              (Variable "fact",
+//                                               Call(Call(BuiltInFunc(Arithmetic Subtract), Variable "n"), Literal(Int 1))))), Literal(Int 1))))),
+//                           Call(Variable "fact'", Literal(Int 5)))
+//              // Convert AST
+//              let actual = (Interpret <| fact)
+//              Expect.equal actual (Literal(Int 120)) (PrintTree actual + " != 120")
+//          }
 
           testProperty "isempty ([ast,ast,...])" <| (fun (l: Value list) ->
           (let list = l @ [ Int 1 ] |> List.map (fun i -> Literal i)
-           let AST = Call(BuiltInFunc(List IsEmpty), ListFromPairs list)
+           let AST = Call(BuiltInFunc(ListF IsEmpty), ListFromPairs list)
            (Interpret <| AST) = Literal(Bool(list.IsEmpty))))
 
           testProperty "implode (explode str) = str" <| (fun (s: NonEmptyString) ->
           (let AST =
-              Call(BuiltInFunc(List ImplodeString), Call(BuiltInFunc(List ExplodeString), Literal(String s.Get)))
+              Call(BuiltInFunc(ListF ImplodeString), Call(BuiltInFunc(ListF ExplodeString), Literal(String s.Get)))
            (Interpret <| AST) = Literal(String s.Get))) ] |> testLabel "Evaluation tree"
 
 
 [<EntryPoint>]
 let main argv =
-    let actual = (Interpret <| fact)
-//    runTestsInAssemblyWithCLIArgs [] [||] |> ignore
+//    printf "%A" (Interpret <| fact)
+    runTestsInAssemblyWithCLIArgs [] [||] |> ignore
     0 // return an integer exit code

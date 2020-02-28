@@ -11,6 +11,7 @@
         <Compile Include="Helper.fs" />
         <Compile Include="Combinator_runtime.fs" />
         <Compile Include="Program.fs" />
+        <Content Include="README.md" />
     </ItemGroup>
 
     <ItemGroup>
