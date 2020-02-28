@@ -17,8 +17,10 @@ As the parser is essentially what defines the language grammar, any revisions ma
 
 # Brief Code Overview
 
-The `pExpr` is a top level parser, which can currently be used to parse function definition expressions, anonymous functions (lambdas), bracketed expressions, function application, conditionals, and operator precedence.
+The `pExpr` is a top level parser, which can currently be used to parse function definition expressions, anonymous functions (lambdas), bracketed expressions, function application, conditionals, and operator precedence. The group phase may implement more language features using the same approach. No mutable values of any kind were used in the development as instructed.
+
+You can run `pExpr` or any of the subfunctions using the helper function `pRun` (which runs a parser) in `Program.fs`.
 
 F# Computation expression were used because they are a standard FP pattern that can be used to combine building block parsers to build much more complex parsers and eventually the language grammar.
 
-The testing module (`Testing.fs`) contains a series of unit tests for the parser to ensure that it is returning the correct output type. These tests were used from early on in the development process to ensure test driven development.
+The testing module (`Testing.fs`) contains a series of unit tests for the parser to ensure that it is returning the correct output type. These tests were used from early on in the development process to ensure test driven development. These units can currently be run from `Program.fs`.
