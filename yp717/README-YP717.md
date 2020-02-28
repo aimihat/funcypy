@@ -1,49 +1,24 @@
 # Sample Individual Statement for Individual Code Submission
 
-<!-- YOU HAVE TO ADD A README inidividual statement here -->
-This sample project contains a single F# sample module with uninspiring name `Module1.fs`.
+This folder contains my individual code submission for the High Level Programming module. The core module is in the file titled `Parser.fs`. There is also a Common module (`Common.fs`) which is intended to contain common elements used by other modules in the rest of the project. It uses `Dotnet Core 3.1`, with dependency on `Expecto.Fscheck`.
 
-It uses `Dotnet Core 3.1`, with dependency on `Expecto.Fscheck`.
+A parser combinator approach with computation expressions was used to tackle the parser from a different perspective than Tick 3. Parser combinators proved difficult to work with at first but ultimately made the parser and thereby the language grammar much easier to extend and define. 
+ 
+# How will your code be used by team (if all goes well) including what order are modules in your team project compiled?
+The code in this folder will be used by the team to parse a stream of tokens passed from the tokeniser to form an abstract syntax tree (AST). No other modules have been used from other team members in the development of the parser and all functions were written independently. While our team discussed strategies and approaches for each of the parts of the project, each person wrote code specifically for their own module (or multiple modules where applicable in the specific folder name).
 
-It comes with a VS solution file which however is optional (it can be recreated as needed from project file).
+# What help have you obtained/given others debugging or doing code review?
 
-My login is `tomcl` and it is used:
+Code reviews allowed us to remove non-essential functions and elements of the code, and to refactor the project into a more compatible form with the other modules. While some refactoring will still have to take place after the individual code deadline, all the modules are mostly compatible and should work well together (if all goes well).
 
-* In `tomcl` directory under which this project is put
-* As project (and solution) `tomcl.fsproj`, `tomcl.sol`
-* As second part of `README-tomcl` name
+# How did you work out (who decided what - how do you revise) the types that interface your code with others?
 
-To create correct individual code skeleton:
+As the parser is essentially what defines the language grammar, any revisions made to the AST or the type interfaces primarily happened while I was making the parser. This involved communication between all team members as sometimes tweaks had to be made to ease the load for the parser and the runtimes.
 
-* copy this directory to one with correct name
-* change names of other files with login dependent names to use your login.
-* load `login.fsproj` in VS etc
-* check code will build
-* delete `tomcl.sol` if it causes problems, or overwrite it with VS changed version
-* change `Module1` to appropriate name for your module - keeping file name and module name the same
-   * you need also to change the module name on first line of the file, and the `open Module1` line in `program.fs`. 
-   * In a multi-module FS program use `open ModName` to access function `myFunc` in module `ModName` as `myFunc`.
-   * Without `open Modname` you can access `myFunc` as `modName.myFunc`.
-* replace sample code by your own.
-* change `program.fs code as you wish
-* delete the contents of this readme, the renamed version will be your individual statement for individual code submission.
-* check that you understand all the files (`login.fsproj`, `Program.fs`, `YourModule.fs`) that make up this F# project and how it runs.
+# Brief Code Overview
 
-## EXTENDED BNF
-////////////////////// TOP LEVEL ////////////////////
-ROUNDBRA ::= "(" EXPRESSION ")"
-SQBRA ::= "[" EXPRESSION "]"
-EXPRESSION ::= !!!!SINGLE!!!! | LITERAL | VARIABLE | ARITHMETIC | COMPARISON
-SINGLE ::= STATEMENT | FUNCTION | CONDITIONAL | EXPRESSION
-FUNCTION ::= [ IDENTIFIER ] * IDENTIFIER * AST
-CONDITIONAL ::= EXPRESSION * SINGLE * [ SINGLE ]
-CALL ::= SINGLE * SINGLE
-TUPLE ::= LITERAL * LITERAL
-//////////////////// BOTTOM LEVEL ////////////////////
-   IDENTIFIER ::= STRING
-   VARIABLE   ::= IDENTIFIER
-   LITERAL    ::= BOOL | INT | DOUBLE | STRING | TUPLE
-   ARITHMETIC ::= ADD | SUBTRACT | MULTIPLY | DIVIDE
-   COMPARISON ::= EQ | NE | LT | GT | LE | GE
-//////////////////////////////////////////////////////
-Note: [] indicate the arguemtn is optional in EBNF
+The `pExpr` is a top level parser, which can currently be used to parse function definition expressions, anonymous functions (lambdas), bracketed expressions, function application, conditionals, and operator precedence.
+
+F# Computation expression were used because they are a standard FP pattern that can be used to combine building block parsers to build much more complex parsers and eventually the language grammar.
+
+The testing module (`Testing.fs`) contains a series of unit tests for the parser to ensure that it is returning the correct output type. These tests were used from early on in the development process to ensure test driven development.
