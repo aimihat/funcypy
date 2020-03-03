@@ -96,16 +96,7 @@ let parserTestListWithExpecto =
             let expected = expParseOutput9
             Expect.equal (pRun pExpr tokenInput9) expected "Parsing inp: lambda f -> 3 * 10 + f"
         }
-
-        // test "Parser Test 10" {
-        //     let expected = expParseOutput10
-        //     Expect.equal (pRun pExpr tokenInput10) expected "Parsing inp: 9"
-        // }
     ]
 
 let parserTestsWithExpecto() =
     runTests defaultConfig parserTestListWithExpecto |> ignore
-
-// Property based testing could be used to check whether operator precedence is working
-// i.e. addition is commutative
-// product is distributive over addition

@@ -1,10 +1,6 @@
 module Common
 
 ////////////////////////////////////// TOKEN DEFINITION //////////////////////////////////////
-// TODO: Make sure these match with James's Token types
-// TODO: implementation of something for lists
-// TODO: Find some way of representing priority of the operators
-
 type BuiltInType = 
     | ADD 
     | SUBTRACT 
@@ -18,20 +14,41 @@ type BuiltInType =
     | GE
 
 type Identifier = IDString of string
-// should say keyword
+ 
+/// Inclusion of FI, BEGIN, END in language grammar could make parsing multiple expressions easier
 type Operator = 
-    | BEGIN | LRB | IF | EQUALS | LET | LETREC
-    | END | THEN | ELSE | FI | RRB | IN | LAMBDA | ARROWFUNC
+    | LRB 
+    | IF 
+    | EQUALS 
+    | LET 
+    | LETREC
+    | THEN
+    | ELSE
+    | RRB 
+    | LAMBDA 
+    | ARROWFUNC
 
+/// Unary operators: implementation pending group langauge grammar review - can easily be added
+/// in with C.E. 
 type UnaryOps = NOT | NEGATE
+
+/// Literal Type definitions; currently tuples can only contain two literals but not expressions
+/// this can be a point for further development in the group phase
 type Literal = 
     | Bool of bool 
     | Int of int 
     | Double of double 
     | String of string 
     | Tuple of Literal*Literal
-type CombinatorType = | I | S | K
 
+/// CombinatorType included for combinator runtime
+type CombinatorType = 
+    | I
+    | S
+    | K
+
+/// These types may potentially be useful but could be removed; depends on multiple expression
+/// implementation
 type Whitespace = 
     | Space             // ' '
     | FormFeed          // '\f'
@@ -47,7 +64,6 @@ type Token =
     | TokIdentifier of Identifier
     | TokBuiltInOp of BuiltInType
     | TokWhitespace of Whitespace
-    // | TokNull
 
 //////////////////////////////////////// AST DEFINITION ///////////////////////////////////////
 
@@ -57,8 +73,6 @@ type Ast =
     | FuncApp of Ast * Ast
     | BuiltInFunc of BuiltInType
     | FuncDefExp of Identifier * list<Ast> * Ast 
-    | FuncDefExpRec of Identifier * list<Ast> * Ast // this would be a very neat addition
+    | FuncDefExpRec of Identifier * list<Ast> * Ast
     | Lambda of Ast * Ast
     | Conditional of Ast * Ast * Ast
-
-

@@ -1,4 +1,5 @@
 # Sample Individual Statement for Individual Code Submission
+By Yannis Panagis
 
 This folder contains my individual code submission for the High Level Programming module. The core module is in the file titled `Parser.fs`. There is also a Common module (`Common.fs`) which is intended to contain common elements used by other modules in the rest of the project. It uses `Dotnet Core 3.1`, with dependency on `Expecto.Fscheck`.
 
@@ -14,7 +15,7 @@ Code reviews allowed us to remove non-essential functions and elements of the co
 
 # How did you work out (who decided what - how do you revise) the types that interface your code with others?
 
-As the parser is essentially what defines the language grammar, any revisions made to the AST or the type interfaces primarily happened while I was making the parser. This involved communication between all team members as sometimes tweaks had to be made to ease the load for the parser and the runtimes.
+As the parser is essentially what defines the language grammar, any revisions made to the AST or the type interfaces primarily happened while I was writing the parser. This involved communication between all team members as sometimes tweaks had to be made to ease the load for the parser and the runtimes.
 
 # Brief Code Overview
 
@@ -22,6 +23,12 @@ The `pExpr` is a top level parser, which can currently be used to parse function
 
 You can run `pExpr` or any of the subfunctions using the helper function `pRun` (which runs a parser) in `Program.fs`.
 
-F# Computation expression were used because they are a standard FP pattern that can be used to combine building block parsers to build much more complex parsers and eventually the language grammar.
+The design approach taken for the parser was to use Parser Combinators. The Parser combinator operators took inspiration from the popular F# parsing library FParsec(1), which was used as a structural basis for much of the code developed in this parser.
+
+F# Computation expressions were used because they are a standard FP pattern and provided an elegant means to combine building block parsers to build much more complex parsers and eventually the language grammar. The way they have been used the language grammar is easily extendable for further functionality in the future or for others to pick up from.
+
+Further documentation on specific functions has been included in the parser itself (Parser.fs).
 
 The testing module (`Testing.fs`) contains a series of unit tests for the parser to ensure that it is returning the correct output type. These tests were used from early on in the development process to ensure test driven development. These units can currently be run from `Program.fs`.
+
+(1) https://github.com/stephan-tolksdorf/fparsec

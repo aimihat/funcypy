@@ -1,33 +1,33 @@
 module Parser
 
+/// Things that may be used by other modules such as Tokeniser and Runtimes
+/// included in Common Module (e.g. AST, Token definitions)
 open Common
-
-let print x = printfn "%A" x
 
 /////////////////////////////////////////// PARSER ////////////////////////////////////////////
 
-// Single Case D.U. used as a wrapper to create a type
+/// Single Case D.U. used as a wrapper to create a type
 type Parser<'T> = P of (list<Token> -> int -> Option<'T * int>)
 
-// Basic building block *pToken*: Takes in token list and index *i*; Returns either Some 
-// tuple of the token at *i* and the incremented *i* or None
+/// Basic building block *pToken*: Takes in token list and index *i*; Returns either Some 
+/// tuple of the token at *i* and the incremented *i* or None
 let pToken: Parser<Token> =
     P <| fun tokenList i ->
         if i < tokenList.Length then Some(tokenList.[i], i + 1) else None
 
-// Helper function: Helps to run *aParser* easily
+/// Helper function: Helps to run *aParser* easily
 let pRun (P aParser) tokL = aParser tokL 0
 
-// Takes a *Token* and always returns Some tuple of *Token* and an unaltered index *i*
+/// Takes a *Token* and always returns Some tuple of *Token* and an unaltered index *i*
 let pReturn tok: Parser<'T> = P <| fun t i -> Some(tok, i)
 
-// Takes unit and always returns None
+/// Takes unit and always returns None
 let pFail(): Parser<'T> = P <| fun t i -> None
 
-// Following standard functional pattern, takes output of one parser and feeds it
-// as input to another parser. This allows the chaining of parsers together.
-// *ufunc* is a function that takes a type T and returns a parser of some type U
-// *tparser* is a parser of the same type U
+/// Following standard functional pattern, takes output of one parser and feeds it
+/// as input to another parser. This allows the chaining of parsers together.
+/// *ufunc* is a function that takes a type T and returns a parser of some type U
+/// *tparser* is a parser of the same type U
 let pBind (ufunc: 'T -> Parser<'U>) (P tparser): Parser<'U> =
     P <| fun tokenList i ->
         match tparser tokenList i with
@@ -36,19 +36,19 @@ let pBind (ufunc: 'T -> Parser<'U>) (P tparser): Parser<'U> =
             let (P uparser) = ufunc tvalue
             uparser tokenList newI
 
-// Combines two parsers together
+/// Combines two parsers together
 let pCombine (uParser: Parser<'U>) (tParser: Parser<'T>): Parser<'U> = tParser |> pBind (fun _ -> uParser)
 
-// Applies two parsers and only keeps result of right parser
+/// Applies two parsers and only keeps result of right parser
 let pKeepRight uParser tParser = pCombine uParser tParser
 
-// Applies two parsers and only keeps result of left parser
+/// Applies two parsers and only keeps result of left parser
 let pKeepLeft (uParser: Parser<'U>) (tParser: Parser<'T>): Parser<'T> =
     tParser |> pBind (fun tokenValue -> uParser |> pBind (fun _ -> pReturn tokenValue))
 
-// Takes parser of a list of *tparser* and returns Some tuple of values
-// and the index *i* at which the parser fails (if it does!)
-// Can be used to parse sequences of tokens
+/// Takes parser of a list of *tparser* and returns Some tuple of values
+/// and the index *i* at which the parser fails (if it does!)
+/// Can be used to parse sequences of tokens
 let pMany (P t): Parser<'T list> =
     P <| fun tokL index ->
         // define tail recursive "loop"
@@ -58,8 +58,8 @@ let pMany (P t): Parser<'T list> =
             | Some(tokValue, tpos) -> loop (tokValue :: lst) tpos
         loop [] index // call the loop
 
-// Similar to pMany but requires parsing success at least once
-// Note: is left associative and loop is tail recursive so optimised for F#
+/// Similar to pMany but requires parsing success at least once
+/// Note: is left associative and loop is tail recursive so optimised for F#
 let pChainlMin1 (term: Parser<'T>) (sep: Parser<'T -> 'T -> 'T>): Parser<'T> =
     let (P termfun) = term
     let (P sepfun) = sep
@@ -75,8 +75,8 @@ let pChainlMin1 (term: Parser<'T>) (sep: Parser<'T -> 'T -> 'T>): Parser<'T> =
         | None -> None
         | Some(termValue, termI) -> loop termValue termI
 
-// F# Computation expression: makes it easier to build more complex parsers
-// Standard FP pattern using earlier defined building block functions
+/// F# Computation expression: makes it easier to build more complex parsers
+/// Standard FP pattern using earlier defined building block functions
 type ParserBuilder() =
     class
         member x.Bind(t, uf) = pBind uf t // Enables let!
@@ -88,7 +88,7 @@ type ParserBuilder() =
 
 let parser = ParserBuilder()
 
-// Token -> bool; token type checking functions used for unpacking annotation noise
+/// Token -> bool; token type checking functions used for unpacking annotation noise
 let isLiteral (tok: Token) =
     match tok with
     | TokLit _ -> true
@@ -114,21 +114,21 @@ let isBuiltInOp (tok: Token) =
     | TokBuiltInOp _ -> true
     | _ -> false
 
-// Parses token and if satisfy evaluates to true then returns token, else returns fail
+/// Parses token and if satisfy evaluates to true then returns token, else returns fail
 let pSatisfy (satisfy: Token -> bool): Parser<Token> =
     parser {
         let! tok = pToken
         if satisfy tok then return tok else return! pFail()
     }
 
-// Takes a mapping function that maps a type T to type U and a parser of T
+/// Takes a mapping function that maps a type T to type U and a parser of T
 let pMap mappingFunc tParser =
     parser {
         let! tokenType = tParser
         return mappingFunc tokenType     
     }
 
-// Combines two parsers into a Parser of a Pair
+/// Combines two parsers into a Parser of a Pair
 let pPair uParser tParser =
     parser {
         let! first = tParser
@@ -136,23 +136,23 @@ let pPair uParser tParser =
         return first, second 
     }
 
-// Combines two parsers such that if uParser fails it tries tParser
+/// Combines two parsers such that if uParser fails it tries tParser
 let pOrElse (P uParser) (P tParser) =
     P <| fun str pos ->
         match tParser str pos with
         | None -> uParser str pos
         | Some(tvalue, tpos) -> Some(tvalue, tpos)
 
-// (AND combinator) applies first parser to source stream, then applies second to remaining part of stream
+/// (AND combinator) applies first parser to source stream, then applies second to remaining part of stream
 let pAnd (P uParser) (P tParser) =
     P <| fun str pos ->
         match tParser str pos with
         | Some(tvalue, tpos) -> uParser tvalue tpos
         | _ -> None
 
-// Define combinators: using static member to attach methods specifically to Parser type
-// *member* keyword shows that this is a member function (i.e. a method)
-// After this we can express parsers using combinators to make things even more readable!
+/// Define combinators: using static member to attach methods specifically to Parser type
+/// *member* keyword shows that this is a member function (i.e. a method)
+/// After this we can express parsers using combinators to make things even more readable!
 type Parser<'T> with
     static member (>>=) (t, uf) = pBind uf t
     static member (>>.) (t, u) = pKeepRight u t
@@ -162,7 +162,7 @@ type Parser<'T> with
     static member (<|>) (t, u) = pOrElse u t
     static member (<&>) (t, u) = pAnd u t
 
-// Similar to pMany but requires 1 or more 'T instead of 0 or more
+/// Similar to pMany but requires 1 or more 'T instead of 0 or more
 let pManyMin1 tparser =
     parser {
         let! head = tparser
@@ -170,15 +170,14 @@ let pManyMin1 tparser =
         return head :: tail 
     }
 
-// Skips a specific token given as input
+/// Skips a specific token given as input
 let pSkipToken tok =
     parser {
         let! token = pToken
         if tok = token then return () else return! pFail()
     }
     
-// Up to here we defined basic parsers and parser combinators and now we will work on defining the language grammar
-// Get AST Type from BuiltIn Operator, Literal (Const), Identifier (Var), Special Operators
+/// Get AST Type from BuiltIn Operator, Literal (Const), Identifier (Var), Special Operators
 let pBuiltInFunc = pSatisfy isBuiltInOp |>> fun tok ->
     match tok with
     | TokBuiltInOp op -> op |> BuiltInFunc
@@ -229,12 +228,12 @@ let pchainMultiDivide = pChainlMin1 pTerm pmultiOrDivide
 let pchainAddSubtract = pChainlMin1 pchainMultiDivide paddOrSubtract
 
 let pCompOps = pLessThan <|> pLessThanOrEq <|> pGreaterThan <|> pGreaterThanOrEq <|> pEqualTo
-let pChainCompOps = pChainlMin1 pTerm pCompOps
 
 // Top level chained Function application parser with operator precedence integrated
 let pChainedFuncApps = pChainlMin1 pchainAddSubtract pCompOps
 
-// Top Level AST parser: called with pRun
+/// Top Level AST expression parser that combines everything we've done so far
+/// Can be called with pRun (helper function)
 let rec pExpr =
     let pFuncDefExp, pFuncDefExpRec =
         let p keyword f =
@@ -256,7 +255,7 @@ let rec pExpr =
             return e
         }
 
-    let parseLambda =
+    let pLambda =
         parser {
             do! pSkipToken (TokSpecOp LAMBDA)
             let! arg = pExpr
@@ -286,4 +285,4 @@ let rec pExpr =
             return Conditional(condition, ifTrue, ifFalse)
         }
 
-    pFuncDefExp <|> pFuncDefExpRec <|> parseLambda <|> pIfThenElse <|> pFuncApp <|> pBracketed <|> pChainedFuncApps <|> pVariable <|> pConst 
+    pFuncDefExp <|> pFuncDefExpRec <|> pLambda <|> pIfThenElse <|> pFuncApp <|> pBracketed <|> pChainedFuncApps <|> pVariable <|> pConst
