@@ -40,14 +40,6 @@ let expParseOutput8 = Some (FuncApp (FuncApp (BuiltInFunc ADD,Const (Int 6)),Con
 let tokenInput9 = [TokSpecOp LAMBDA; TokIdentifier (IDString "f"); TokSpecOp ARROWFUNC; TokLit (Int 3); TokBuiltInOp MULTIPLY; TokLit (Int 10); TokBuiltInOp ADD; TokIdentifier (IDString "f")]
 let expParseOutput9 = Some(Lambda(Var (IDString "f"), FuncApp(FuncApp(BuiltInFunc ADD, FuncApp(FuncApp (BuiltInFunc MULTIPLY, Const (Int 3)), Const (Int 10))), Var (IDString "f"))), 8)
 
-// This function is not currently being used
-let makeTokenListIntoTest (testName:string, tokInp:List<Token>, astResult:Option<Ast * int>) =        
-    test testName {
-        let actual = (pRun pExpr tokInp)
-        let expected = astResult
-        Expect.equal actual expected "Message goes here"
-    }
-
 [<Tests>]
 // Sample Unit tests for parseT3 to check functionality
 let parserTestListWithExpecto =
@@ -96,16 +88,7 @@ let parserTestListWithExpecto =
             let expected = expParseOutput9
             Expect.equal (pRun pExpr tokenInput9) expected "Parsing inp: lambda f -> 3 * 10 + f"
         }
-
-        // test "Parser Test 10" {
-        //     let expected = expParseOutput10
-        //     Expect.equal (pRun pExpr tokenInput10) expected "Parsing inp: 9"
-        // }
     ]
 
 let parserTestsWithExpecto() =
     runTests defaultConfig parserTestListWithExpecto |> ignore
-
-// Property based testing could be used to check whether operator precedence is working
-// i.e. addition is commutative
-// product is distributive over addition
