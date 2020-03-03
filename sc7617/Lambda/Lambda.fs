@@ -102,7 +102,8 @@ let parse: (Result<Ast,string> -> Result<LambdaType,string>) =
             match innerFn (Ok body) with
             | Error msg -> Error msg
             | Ok exp ->  Ok (LambdaT (id , exp))
-            | _ -> Error "Invalid type of Lambda"
+            // Why does the rule below will never be mathced?
+            //| _ -> Error "Invalid type of Lambda"
 
         // all expressions
         | Ok (Expression (exp)) -> Ok (LambdaEx (exp))
@@ -394,27 +395,24 @@ let rec eval (env: Env) (inp: Result<LambdaType,string>): Result<LambdaType,stri
                     match eval env (Ok body) with
                     | Error msg -> Error msg
                     | Ok (body) -> Ok (ClosureT (id,body, env))
-                    | _ -> Error "Wrong Lambda Applied"
+                    // Check the rule below, why will this never be applied??
+                    //| _ -> Error "Wrong Lambda Applied"
         // if beta reduction is given, evaluate id & body and then perform beta reduction
-        | Ok (BetaReductionT (lambda, value)) -> 
-            let evaluatedLambdaEx = eval env (Ok lambda)
+        | Ok (BetaReductionT (LambdaT(id, body), LambdaEx(exp))) -> 
+            let evaluatedLambdaEx = eval env (Ok (LambdaT(id, body)))
             match evaluatedLambdaEx with
             | Ok (ClosureT (arg, body, evalenv)) ->
                 // in order to perform beta reduction with expression we need to match for variable & literals before further evaluation
-                match value with
                 // LambdaEx includes beta-reduction cases
-                | LambdaEx (_)->
-                    // if value passed by expression it's already evaluated
-                    // pass expression as a term to substitue variable x
-                    // replace the argument
-                    // if variable is given then transform it to lambda and carry on as before
-                    // if Literal is given -> calculate
-                    let evaluatedValue = value
-                    //let newEnv = (arg, evaluatedValue)::evalenv @ env
-                    let newEnv = evalenv.Add (arg, evaluatedValue)
-                    eval newEnv (Ok body)
-                | _ -> 
-                    failwith "Invalid definition of Beta Reduction"
+                // if value passed by expression it's already evaluated
+                // pass expression as a term to substitue variable x
+                // replace the argument
+                // if variable is given then transform it to lambda and carry on as before
+                // if Literal is given -> calculate
+                let evaluatedValue = LambdaEx(exp)
+                //let newEnv = (arg, evaluatedValue)::evalenv @ env
+                let newEnv = evalenv.Add (arg, evaluatedValue)
+                eval newEnv (Ok body)
             | _ -> failwith "cannot perform beta reduction"
                 // return evaluated reduction for futher calulations
                 // perform arthmetics and return LambdaEx!!
@@ -442,14 +440,27 @@ let rec eval (env: Env) (inp: Result<LambdaType,string>): Result<LambdaType,stri
                     Error msg
             
         | Ok (ClosureT (arg, body, oldenv)) -> Ok (ClosureT (arg, body, oldenv))
-        //| _ -> failwith "failed to evaluate the expression"y
+        | _ -> 
+            let msg = sprintf "This Error Should not Appear, input is %A" inp
+            Error msg
     innerFn
+
+
 
 let LambdaTypeToString =
     let okToStr (inp: Result<string list,string>): string list =
         match inp with
         | Ok str -> str
         | Error msg -> [msg]
+
+    let (|SIGN2STR|_|) = 
+        let innerFn inp = 
+            match inp with
+            | Add -> Some "+"
+            | Subtract -> Some "-"
+            | Multiply -> Some "*"
+            | Divide -> Some "/"
+        innerFn
 
     let rec innerFn (inp: Result<LambdaType,string>) = 
         match inp with
@@ -462,17 +473,18 @@ let LambdaTypeToString =
             | Error msg -> Error msg
             | Ok body -> Ok ("lambda " :: arg :: "." ::  body)
         | Ok (LambdaEx (Variable(IdString arg))) ->Ok [arg]
+        | Ok (LambdaEx (Arithmetic(Variable (IdString x), SIGN2STR sign, Variable(IdString y)))) -> Ok [x + sign + y]
         | Ok (ApplicationT (exp1, exp2)) -> 
             match innerFn (Ok exp1),innerFn (Ok exp2)  with
             | Error msg, Error _ -> Error msg
             | Ok exp1, Ok exp2 -> Ok (["("] @ (exp1) @ [" "] @ (exp2) @ [")"])
             | _ -> Error "Failed to print"
         | Ok (BetaReductionT (lambda, exp)) ->
-            match innerFn (Ok lambda),innerFn (Ok exp) with
+            match innerFn (Ok lambda), innerFn (Ok exp) with
             | Error msg, Error _ -> Error msg
             | Ok lambda, Ok exp -> Ok (["("] @ (lambda) @ [")" ; " "] @ (exp))
             | _ -> Error "Failed to print"
-        | _ -> Error "Failed to printLambda"
+        | _ -> Error "Failed to print Lambda"
     (innerFn)
         >> okToStr
             >> String.concat ("") 
@@ -487,8 +499,12 @@ let toAst =
         match inp with
         | Ok (LambdaEx (Literal exp)) -> Ok (Expression (Literal exp))
         | Ok closure -> 
+            //print closure
             let lambdaString = LambdaTypeToString (Ok closure)
             let msg = sprintf "No valid expression supplied for lambda calculation. Evaluated pure lambda is: %A" lambdaString
+            Error msg
+        | _ -> 
+            let msg = sprintf "toAst: Invalid match case with received input, %A" inp
             Error msg
     innerFn
 
