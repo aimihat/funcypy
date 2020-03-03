@@ -40,14 +40,6 @@ let expParseOutput8 = Some (FuncApp (FuncApp (BuiltInFunc ADD,Const (Int 6)),Con
 let tokenInput9 = [TokSpecOp LAMBDA; TokIdentifier (IDString "f"); TokSpecOp ARROWFUNC; TokLit (Int 3); TokBuiltInOp MULTIPLY; TokLit (Int 10); TokBuiltInOp ADD; TokIdentifier (IDString "f")]
 let expParseOutput9 = Some(Lambda(Var (IDString "f"), FuncApp(FuncApp(BuiltInFunc ADD, FuncApp(FuncApp (BuiltInFunc MULTIPLY, Const (Int 3)), Const (Int 10))), Var (IDString "f"))), 8)
 
-// This function is not currently being used
-let makeTokenListIntoTest (testName:string, tokInp:List<Token>, astResult:Option<Ast * int>) =        
-    test testName {
-        let actual = (pRun pExpr tokInp)
-        let expected = astResult
-        Expect.equal actual expected "Message goes here"
-    }
-
 [<Tests>]
 // Sample Unit tests for parseT3 to check functionality
 let parserTestListWithExpecto =
