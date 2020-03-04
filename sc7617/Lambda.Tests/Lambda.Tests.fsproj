@@ -4,16 +4,15 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Common.fs" />
-<<<<<<< HEAD
-    <Compile Include="Tokeniser.fs" />
-=======
->>>>>>> 18430ecc3904b8a8bddd47917fc0902cd49d61d1
-    <Compile Include="Parser.fs" />
-    <Compile Include="Testing.fs" />
-    <Compile Include="Program.fs" />
+    <ProjectReference Include="..\Lambda\Lambda.fsproj">
+      <Name>Lambda.fsproj</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Lambda.Tests.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Expecto" Version="8.13.1" />
     <PackageReference Include="Expecto.FsCheck" Version="8.13.1" />
   </ItemGroup>
 </Project>
