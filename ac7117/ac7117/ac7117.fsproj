@@ -6,10 +6,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="old.fs" />
-        <Compile Include="EEExtensions.fs" />
         <Compile Include="Helper.fs" />
         <Compile Include="Combinator_runtime.fs" />
+        <Compile Include="Tests.fs" />
         <Compile Include="Program.fs" />
         <Content Include="README.md" />
     </ItemGroup>
