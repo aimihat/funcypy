@@ -196,18 +196,18 @@ module Tests =
                 )
 
             // This test is expected to fail since variable inside conditional are declared as argument of Lambda function
-            testProp "Lambda Condtional with Literal Comparison evaluates to Error message with Expression or Literal" <| (fun(Gen.GenCond exp) ->
-            (   
-                let expected = "No valid expression supplied for lambda calculation. Evaluated pure lambda is"
-                let expected' = "Couldn't find a Variable in the environment"
-                match lambda exp with
-                | Ok (Expression (Literal lit)) -> Expect.isTrue true
-                | Error msg when msg <> expected'-> Expect.isMatch (msg.Split ':' |> Seq.toList |> List.head) expected
-                | Error msg'-> Expect.isMatch msg' expected'
-                | _ -> 
-                    Expect.isTrue false
-            )
-            )
+            // testProp "Lambda Condtional with Literal Comparison evaluates to Error message with Expression or Literal" <| (fun(Gen.GenCond exp) ->
+            // (   
+            //     let expected = "No valid expression supplied for lambda calculation. Evaluated pure lambda is"
+            //     let expected' = "Couldn't find a Variable in the environment"
+            //     match lambda exp with
+            //     | Ok (Expression (Literal lit)) -> Expect.isTrue true
+            //     | Error msg when msg <> expected'-> Expect.isMatch (msg.Split ':' |> Seq.toList |> List.head) expected
+            //     | Error msg'-> Expect.isMatch msg' expected'
+            //     | _ -> 
+            //         Expect.isTrue false
+            // )
+            // )
             testProp "Literal Comparison Evaluates to Literal Bool" <| (fun (Gen.GenCompEx (exp)) ->
             (
                 match lambda exp with
