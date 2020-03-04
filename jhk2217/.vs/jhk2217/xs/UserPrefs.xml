@@ -1,9 +1,10 @@
 ﻿<Properties StartupConfiguration="{E1882577-91C2-40E5-860D-B1BFD6C36CCD}|Default">
   <MonoDevelop.Ide.ItemProperties.jhk2217 PreferredExecutionTarget="MonoDevelop.Default" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Lexer.fs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Program.fs">
     <Files>
-      <File FileName="Program.fs" Line="7" Column="7" />
-      <File FileName="Lexer.fs" Line="134" Column="140" />
+      <File FileName="Program.fs" Line="8" Column="31" />
+      <File FileName="Patronum.fs" />
+      <File FileName="Lexer.fs" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />

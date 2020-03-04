@@ -183,22 +183,38 @@ let tokeniser (str: string) =
     let rec tokenise (tokLst,otherLst) =
         let rec dashID (toks,others) = //must figure out if '-' is negative sign, NEGATE or SUBTRACT
             match others with
-            | hd::tl when hd = '>' -> (toks @ [TokSpecOp (ARROWFUNC)],others)
-            | hd::tl when List.exists (fun el -> el = hd) intChars -> buildNum (toks,others,false)
-            | hd::tl when hd = ' ' ->
-                match skipSpaces tl  with
-                | hd::tl when List.exists (fun el -> el = hd) intChars -> (toks @ [TokBuiltInOp (SUBTRACT)],others)
-                | '-'::hd::tl when List.exists (fun el -> el = hd) intChars -> (toks @ [TokBuiltInOp (SUBTRACT)],others)
-                | hd::tl -> (toks @ [TokUnaryOp (NEGATE)],others)
-                | [] -> 
-                    match tokLst |> List.rev |> skipSpaceToks |> List.head with
-                    | TokLit (Int _) -> (toks @ [TokBuiltInOp (SUBTRACT)],others)
-                    | TokLit (Double _) -> (toks @ [TokBuiltInOp (SUBTRACT)],others)
-                    | _ -> (toks @ [TokUnaryOp (NEGATE)],others)
-            | [] -> 
-                match tokLst |> List.rev |> skipSpaceToks |> List.head with
+            | hd::tl when hd = '>' -> (toks @ [TokSpecOp (ARROWFUNC)],tl) // ->
+            | hd::tl when List.exists (fun el -> el = hd) intChars ->
+                match tokLst |> List.rev |> List.head with // #-#
                 | TokLit (Int _) -> (toks @ [TokBuiltInOp (SUBTRACT)],others)
                 | TokLit (Double _) -> (toks @ [TokBuiltInOp (SUBTRACT)],others)
+                | _ -> buildNum (toks,others,false)
+            | hd::tl when hd = ' ' ->
+                match skipSpaces tl  with
+                | hd::tl when List.exists (fun el -> el = hd) intChars -> (toks @ [TokBuiltInOp (SUBTRACT)],others) // - #
+                | '-'::hd::tl when List.exists (fun el -> el = hd) intChars -> (toks @ [TokBuiltInOp (SUBTRACT)],others) // - -#
+                | hd::tl -> (toks @ [TokUnaryOp (NEGATE)],others)
+                | [] -> //reached end of string
+                    match tokLst |> List.rev |> skipSpaceToks |> List.head with // # -
+                    | TokLit (Int _) -> (toks @ [TokBuiltInOp (SUBTRACT)],others)
+                    | TokLit (Double _) -> (toks @ [TokBuiltInOp (SUBTRACT)],others)
+                    | TokBuiltInOp _ -> (toks @ [TokBuiltInOp (SUBTRACT)],others)
+                    | _ -> (toks @ [TokUnaryOp (NEGATE)],others)
+            | hd::tl when inMap mathMap (string hd) -> // - +
+                match tokLst |> List.rev |> List.head with // #-#
+                | TokLit (Int _) -> (toks @ [TokBuiltInOp (SUBTRACT)],others)
+                | TokLit (Double _) -> (toks @ [TokBuiltInOp (SUBTRACT)],others)
+                | _ -> buildNum (toks,others,false)
+            | hd1::hd2::tl when List.exists (fun el -> el = charstring [hd1;hd2]) (keys mathMap) -> // - ==
+                match tokLst |> List.rev |> List.head with // #-#
+                | TokLit (Int _) -> (toks @ [TokBuiltInOp (SUBTRACT)],others)
+                | TokLit (Double _) -> (toks @ [TokBuiltInOp (SUBTRACT)],others)
+                | _ -> buildNum (toks,others,false)
+            | [] -> //reached end of string
+                match tokLst |> List.rev |> skipSpaceToks |> List.head with // # -
+                | TokLit (Int _) -> (toks @ [TokBuiltInOp (SUBTRACT)],others)
+                | TokLit (Double _) -> (toks @ [TokBuiltInOp (SUBTRACT)],others)
+                | TokBuiltInOp _ -> (toks @ [TokBuiltInOp (SUBTRACT)],others)
                 | _ -> (toks @ [TokUnaryOp (NEGATE)],others)
             | _ -> (toks @ [TokUnaryOp (NEGATE)],others)
         match otherLst with
@@ -210,7 +226,7 @@ let tokeniser (str: string) =
         | hd::tl when List.exists (fun el -> el = string hd) (keys mathMap) -> tokenise (tokLst @ [TokBuiltInOp mathMap.[string hd]],tl)
         | hd1::hd2::tl when List.exists (fun el -> el = charstring [hd1;hd2]) (keys mathMap) -> tokenise (tokLst @ [TokBuiltInOp mathMap.[charstring [hd1;hd2]]],tl)
         | hd::tl when List.exists (fun el -> el = string hd) (keys opMap) -> tokenise (tokLst @ [TokSpecOp opMap.[string hd]],tl)
-        //hd1::hd2 isn't needed for opMap since ARROWFUNC is taken care of by dashID and it processes IF and IN, which we don't want
+        //hd1::hd2 isn't needed for opMap since ARROWFUNC is taken care of by dashID, also hd1::hd2 might processes IF and IN, which we don't want
         | hd::tl when List.exists (fun el -> el = string hd) (keys spaceMap) -> tokenise (tokLst @ [TokWhitespace spaceMap.[string hd]],tl)
         | hd::tl ->
             match extractWord ([],otherLst) with //true, false, IF, LET, THEN, ELSE, IN, and LAMBDA only works when there is a space before and after
