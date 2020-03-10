@@ -1,7 +1,29 @@
-# FuncyPy: Lexer Module made by James Kim
+# Sample Individual Statement for Individual Code Submission
 
-This model contains the tokeniser, which is the first step of breaking down the string which will be our input code into a list of tokens. The tokens will go on to the parser module made by Yannis to create the AST. To match the needs of the parser as much as possible, the tokens were chosen after a few discussions with Yannis. From then on, all code was written by myself.
+This sample project contains a single F# sample module with uninspiring name `Module1.fs`.
 
-The most complex part of the tokeniser comes in the "DashID" function, since the character '-' needs to be processed properly out of 4 possible options: ARROWFUNC "->", SUBTRACT "1 - 1", a negative integer "-1", and NEGATE "-p". Reflecting this, a large portion of tests have been dedicated to testing DashID.
+It uses `Dotnet Core 3.1`, with dependency on `Expecto.Fscheck`.
 
-After writing the whole tokeniser, the most questionable token is the TokLit Tuple = Literal*Literal. As discovered when trying to write code for this function, it came across two major problems: a list can only contain data of type TokLit - not allowing any functions or operators to be written in a list, and there is no way to define an empty list since there is no null Literal. This problem is currently temporarily rectified by substituting the blanks of a tuple with the empty string token TokLit String "", but this is a very poor solution. When we move over to the group work portion of the project, I will bring these problems up to the team and discuss more practical solutions to making a list - either by redefining the tokens or only tokenising the brackets and forming the list in the parser.
+It comes with a VS solution file which however is optional (it can be recreated as needed from project file).
+
+My login is `tomcl` and it is used:
+
+* In `tomcl` directory under which this project is put
+* As project (and solution) `tomcl.fsproj`, `tomcl.sol`
+* As second part of `README-tomcl` name
+
+To create correct individual code skeleton:
+
+* copy this directory to one with correct name
+* change names of other files with login dependent names to use your login.
+* load `login.fsproj` in VS etc
+* check code will build
+* delete `tomcl.sol` if it causes problems, or overwrite it with VS changed version
+* change `Module1` to appropriate name for your module - keeping file name and module name the same
+   * you need also to change the module name on first line of the file, and the `open Module1` line in `program.fs`. 
+   * In a multi-module FS program use `open ModName` to access function `myFunc` in module `ModName` as `myFunc`.
+   * Without `open Modname` you can access `myFunc` as `modName.myFunc`.
+* replace sample code by your own.
+* change `program.fs code as you wish
+* delete the contents of this readme, the renamed version will be your individual statement for individual code submission.
+* check that you understand all the files (`login.fsproj`, `Program.fs`, `YourModule.fs`) that make up this F# project and how it runs.

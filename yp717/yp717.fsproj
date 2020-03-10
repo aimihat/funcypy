@@ -1,17 +1,19 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
-
   <ItemGroup>
-    <Compile Include="Module1.fs" />
+    <Compile Include="Common.fs" />
+<<<<<<< HEAD
+    <Compile Include="Tokeniser.fs" />
+=======
+>>>>>>> 18430ecc3904b8a8bddd47917fc0902cd49d61d1
+    <Compile Include="Parser.fs" />
+    <Compile Include="Testing.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Expecto.FsCheck" Version="8.13.1" />
   </ItemGroup>
-
 </Project>

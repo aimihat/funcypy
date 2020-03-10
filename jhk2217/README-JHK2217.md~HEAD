@@ -1,0 +1,7 @@
+# FuncyPy: Lexer Module made by James Kim
+
+This model contains the tokeniser, which is the first step of breaking down the string which will be our input code into a list of tokens. The tokens will go on to the parser module made by Yannis to create the AST. To match the needs of the parser as much as possible, the tokens were chosen after a few discussions with Yannis. From then on, all code was written by myself.
+
+The most complex part of the tokeniser comes in the "DashID" function, since the character '-' needs to be processed properly out of 4 possible options: ARROWFUNC "->", SUBTRACT "1 - 1", a negative integer "-1", and NEGATE "-p". Reflecting this, a large portion of tests have been dedicated to testing DashID.
+
+After writing the whole tokeniser, the most questionable token is the TokLit Tuple = Literal*Literal. As discovered when trying to write code for this function, it came across two major problems: a list can only contain data of type TokLit - not allowing any functions or operators to be written in a list, and there is no way to define an empty list since there is no null Literal. This problem is currently temporarily rectified by substituting the blanks of a tuple with the empty string token TokLit String "", but this is a very poor solution. When we move over to the group work portion of the project, I will bring these problems up to the team and discuss more practical solutions to making a list - either by redefining the tokens or only tokenising the brackets and forming the list in the parser.
