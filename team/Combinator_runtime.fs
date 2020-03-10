@@ -1,6 +1,6 @@
 module Combinator_runtime
 
-open Helper
+open Helpers
 open PAPHelpers
 
 // Bracket Abstraction implemented recursively with `Abstract` and `BracketAbstract`

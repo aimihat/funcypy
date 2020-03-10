@@ -186,18 +186,24 @@ type Whitespace =
     | VerticalTab       // '\v'
 type Operator = 
     | LRB 
+    | RRB 
+    | RSB 
+    | LSB 
     | IF 
     | EQUALS 
     | LET 
     | LETREC
     | THEN
     | ELSE
-    | RRB 
     | LAMBDA 
+    | COMMA
     | ARROWFUNC
+
+type UnaryOps = NOT | NEGATE
 
 type Token = 
     | TokLit of Value
+    | TokUnaryOp of UnaryOps
     | TokSpecOp of Operator
     | TokIdentifier of Identifier
     | TokBuiltInOp of BuiltInType

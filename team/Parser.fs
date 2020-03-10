@@ -4,7 +4,7 @@ module Parser
 
 /// Things that may be used by other modules such as Tokeniser and Runtimes
 /// included in Common Module (e.g. AST, Token definitions)
-open Common
+open Helpers
 
 /////////////////////////////////////////// PARSER ////////////////////////////////////////////
 
@@ -187,16 +187,15 @@ let pBuiltInFunc = pSatisfy isBuiltInOp |>> fun tok ->
 
 let pConst = pSatisfy isLiteral |>> fun tok ->
     match tok with
-    | TokLit(Bool x) -> (Bool x) |> Const
-    | TokLit(Int x) -> (Int x) |> Const
-    | TokLit(Double x) -> (Double x) |> Const
-    | TokLit (String x) -> (String x) |> Const
-    | TokLit(Tuple(x, y)) -> (Tuple(x, y)) |> Const
+    | TokLit(Bool x) -> (Bool x) |> Literal
+    | TokLit(Int x) -> (Int x) |> Literal
+    | TokLit(Double x) -> (Double x) |> Literal
+    | TokLit (String x) -> (String x) |> Literal
     | _ -> failwith "Expected Literal but did not receive literal"
 
 let pVariable = pSatisfy isIdentifier |>> fun tok ->
     match tok with
-    | TokIdentifier str -> str |> Var
+    | TokIdentifier str -> str |> Variable
     | _ -> failwith "Expected Identifier but did not receive Identifier"
 
 let pSpecOp = pSatisfy isOperator |>> fun tok -> 
@@ -209,18 +208,19 @@ let pTerm = pConst <|> pVariable
 
 // pOp Skips the operator and builds an FuncApp AST
 let pOp opTok operator =
-    pSkipToken opTok |>> fun c leftTree rightTree -> FuncApp(FuncApp((BuiltInFunc operator), leftTree), rightTree)
+    pSkipToken opTok |>> fun c leftTree rightTree -> DCall(DCall((BuiltInFunc operator), leftTree), rightTree)
 
-let pAdd = pOp (TokBuiltInOp ADD) ADD
-let pSubtract = pOp (TokBuiltInOp SUBTRACT) SUBTRACT
-let pMultiply = pOp (TokBuiltInOp MULTIPLY) MULTIPLY
-let pDivide = pOp (TokBuiltInOp DIVIDE) DIVIDE
+let pAdd = pOp (TokBuiltInOp (Arithm Add)) (Arithm Add)
+let pSubtract = pOp (TokBuiltInOp (Arithm Subtract)) (Arithm Subtract)
+let pMultiply = pOp (TokBuiltInOp (Arithm Multiply)) (Arithm Multiply)
+let pDivide = pOp (TokBuiltInOp (Arithm Divide)) (Arithm Divide)
 
-let pLessThan = pOp (TokBuiltInOp LT) LT
-let pLessThanOrEq = pOp (TokBuiltInOp LE) LE
-let pGreaterThan = pOp (TokBuiltInOp GT) GT
-let pGreaterThanOrEq = pOp (TokBuiltInOp GE) GE
-let pEqualTo = pOp (TokBuiltInOp EQ) EQ
+let pLessThan = pOp (TokBuiltInOp (Comp Lt)) (Comp Lt)
+let pLessThanOrEq = pOp (TokBuiltInOp (Comp Le)) (Comp Le)
+let pGreaterThan = pOp (TokBuiltInOp (Comp Gt)) (Comp Gt)
+let pGreaterThanOrEq = pOp (TokBuiltInOp (Comp Ge)) (Comp Ge)
+let pEqualTo = pOp (TokBuiltInOp (Comp Eq)) (Comp Eq)
+let pNotEqualTo = pOp (TokBuiltInOp (Comp Ne)) (Comp Ne)
 
 // Define precedence of basic BuiltInType operators
 let pAllOp = pAdd <|> pSubtract <|> pMultiply <|> pDivide // not currently being used
@@ -229,19 +229,25 @@ let paddOrSubtract = pAdd <|> pSubtract
 let pchainMultiDivide = pChainlMin1 pTerm pmultiOrDivide
 let pchainAddSubtract = pChainlMin1 pchainMultiDivide paddOrSubtract
 
-let pCompOps = pLessThan <|> pLessThanOrEq <|> pGreaterThan <|> pGreaterThanOrEq <|> pEqualTo
+let pCompOps = pLessThan <|> pLessThanOrEq <|> pGreaterThan <|> pGreaterThanOrEq <|> pEqualTo <|> pNotEqualTo
 
 // Top level chained Function application parser with operator precedence integrated
 let pChainedFuncApps = pChainlMin1 pchainAddSubtract pCompOps
 
 /// Top Level AST expression parser that combines everything we've done so far
 /// Can be called with pRun (helper function)
-let rec pExpr =
+
+y = 
+    x = 5
+    z = 2
+    x + z
+
+let rec pExpr: Parser<Ast> =
     let pFuncDefExp, pFuncDefExpRec =
         let p keyword f =
             parser {
                 do! pSkipToken (TokSpecOp keyword)
-                let! (Var id) = pVariable
+                let! (Variable id) = pVariable
                 let! value = pMany pVariable
                 do! pSkipToken (TokSpecOp EQUALS)
                 let! body = pExpr
@@ -271,8 +277,8 @@ let rec pExpr =
             let! leftTree = pVariable <|> pBracketed
             let! operator = pBuiltInFunc
             let! rightList = pManyMin1 (pVariable <|> pConst <|> pBracketed)
-            let rightTree = rightList |> List.reduce (fun acc e -> FuncApp(acc, e))
-            return FuncApp(FuncApp(operator, leftTree), rightTree)
+            let rightTree = rightList |> List.reduce (fun acc e -> DCall(acc, e))
+            return DCall(DCall(operator, leftTree), rightTree)
         }
 
     let pIfThenElse =
@@ -284,7 +290,7 @@ let rec pExpr =
             let! ifTrue = pBody
             do! pSkipToken (TokSpecOp ELSE)
             let! ifFalse = pBody
-            return Conditional(condition, ifTrue, ifFalse)
+            return DCall(DCall(DCall(BuiltInFunc IfThenElse, condition), ifTrue), ifFalse)
         }
 
     pFuncDefExp <|> pFuncDefExpRec <|> pLambda <|> pIfThenElse <|> pFuncApp <|> pBracketed <|> pChainedFuncApps <|> pVariable <|> pConst
