@@ -276,12 +276,15 @@ let rec pExpr: Parser<Ast> =
             return FuncDefExp(name, definition, expr)
         }
     
+    // so this has an error even if it isnt called
+    // 
     let pCall = 
         parser {
-            do printf "enter\n"
-            let! left = pExpr
+            do printf "entered pCall \n" // runs this line when initialising
+            let! left = pVariable // problem is here because it doesnt get pExpr but not sure why
+            do printf "got left \n %A" left
             let! right = pManyMin1 pExpr
-            do printf "%A, %A" left right
+            do printf "got left \n %A" right
             return combineCalls left right
         }
         
@@ -351,4 +354,5 @@ let rec pExpr: Parser<Ast> =
             return DCall(DCall(DCall(BuiltInFunc IfThenElse, condition), ifTrue), ifFalse)
         }
     
-    pFuncDefExp <|> pLambda <|> pIfThenElse <|> pOperatorApp <|> pBracketed <|> pChainedFuncApps <|> pCall <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst
+    // even if you remove call from here it still doesnt work
+    pCall <|> pFuncDefExp <|> pLambda <|> pIfThenElse <|> pOperatorApp <|> pBracketed <|> pChainedFuncApps <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst

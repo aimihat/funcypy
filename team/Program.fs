@@ -19,11 +19,39 @@ let x =
                , DCall(Variable "f", Literal (Int 3)))
 
 
-[<EntryPoint>]
+[<EntryPoint>] 
 let main argv =
     let testString = "2+2"
+
     let tokenTest1 = [TokSpecOp DEF ; TokIdentifier ("f") ; TokIdentifier ("y") ; TokSpecOp EQUALS ; TokWhitespace LineFeed ; TokSpecOp DEF ; TokIdentifier ("x") ; TokSpecOp EQUALS ; TokLit (Int 3) ; TokWhitespace LineFeed ; TokIdentifier ("x") ; TokBuiltInOp (Arithm Multiply) ; TokIdentifier ("y") ; TokWhitespace LineFeed ; TokIdentifier ("f") ; TokLit (Int 2)]
     printf "%A" <| (pRun pExpr tokenTest1)
+
+    // function application of lambdas fails (lambda x -> x + 1) 2
+    let tokenTest2 = [TokSpecOp LAMBDA ; TokIdentifier "x" ; TokSpecOp ARROWFUNC ; TokIdentifier "x" ; TokBuiltInOp (Arithm Add) ; TokLit (Int 1) ; TokLit (Int 2)]
+    printf "%A" <| (pRun pExpr tokenTest2)
+
+    let tokenTest3 = [TokSpecOp LRB ; TokSpecOp LAMBDA ; TokIdentifier "x" ; TokSpecOp ARROWFUNC ; TokIdentifier "x" ; TokBuiltInOp (Arithm Add) ; TokLit (Int 1) ; TokSpecOp RRB ; TokLit (Int 2)]
+    printf "\n %A" <| (pRun pExpr tokenTest3)
+    printf "\n \n \n \n"
+    // FuncDefExp('f', Lambda('x', Lambda('y', AST=== 2*x)), Call(Call('f','2'), '3')))
+    let example_5 = """
+    def f x y = 2*x 
+    f 2 3
+    """
+    let tokenTest4 = [TokSpecOp DEF ; TokIdentifier "f" ; TokIdentifier "x" ; TokIdentifier "y" ; TokSpecOp EQUALS ; TokLit (Int 2) ; TokBuiltInOp (Arithm Multiply) ; TokIdentifier "x" ; TokWhitespace LineFeed ; TokIdentifier "f" ; TokLit (Int 2) ; TokLit (Int 3)]
+    printf "\n %A" <| (pRun pExpr tokenTest4)
+
+//     let tokenTest5 = [TokSpecOp LRB ; TokSpecOp LAMBDA ; TokIdentifier "x" ; TokSpecOp ARROWFUNC ; TokIdentifier "x" ; TokBuiltInOp (Arithm Add) ; TokLit (Int 1) ; TokSpecOp RRB ; TokLit (Int 2)]
+//     printf "%A" <| (pRun pExpr tokenTest5)
+
+//     let tokenTest6 = [TokSpecOp LRB ; TokSpecOp LAMBDA ; TokIdentifier "x" ; TokSpecOp ARROWFUNC ; TokIdentifier "x" ; TokBuiltInOp (Arithm Add) ; TokLit (Int 1) ; TokSpecOp RRB ; TokLit (Int 2)]
+//     printf "%A" <| (pRun pExpr tokenTest6)
+
+//     let tokenTest7 = [TokSpecOp LRB ; TokSpecOp LAMBDA ; TokIdentifier "x" ; TokSpecOp ARROWFUNC ; TokIdentifier "x" ; TokBuiltInOp (Arithm Add) ; TokLit (Int 1) ; TokSpecOp RRB ; TokLit (Int 2)]
+//     printf "%A" <| (pRun pExpr tokenTest7)
+
+//     let tokenTest8 = [TokSpecOp LRB ; TokSpecOp LAMBDA ; TokIdentifier "x" ; TokSpecOp ARROWFUNC ; TokIdentifier "x" ; TokBuiltInOp (Arithm Add) ; TokLit (Int 1) ; TokSpecOp RRB ; TokLit (Int 2)]
+//     printf "%A" <| (pRun pExpr tokenTest8)
     // runTestsInAssemblyWithCLIArgs [] [||] |> ignore
     System.Console.ReadKey() |> ignore
     0
