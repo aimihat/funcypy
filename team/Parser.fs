@@ -215,12 +215,14 @@ let pSubtract = pOp (TokBuiltInOp (Arithm Subtract)) (Arithm Subtract)
 let pMultiply = pOp (TokBuiltInOp (Arithm Multiply)) (Arithm Multiply)
 let pDivide = pOp (TokBuiltInOp (Arithm Divide)) (Arithm Divide)
 
+
 let pLessThan = pOp (TokBuiltInOp (Comp Lt)) (Comp Lt)
 let pLessThanOrEq = pOp (TokBuiltInOp (Comp Le)) (Comp Le)
 let pGreaterThan = pOp (TokBuiltInOp (Comp Gt)) (Comp Gt)
 let pGreaterThanOrEq = pOp (TokBuiltInOp (Comp Ge)) (Comp Ge)
 let pEqualTo = pOp (TokBuiltInOp (Comp Eq)) (Comp Eq)
 let pNotEqualTo = pOp (TokBuiltInOp (Comp Ne)) (Comp Ne)
+
 
 // Define precedence of basic BuiltInType operators
 let pAllOp = pAdd <|> pSubtract <|> pMultiply <|> pDivide // not currently being used
@@ -237,24 +239,52 @@ let pChainedFuncApps = pChainlMin1 pchainAddSubtract pCompOps
 /// Top Level AST expression parser that combines everything we've done so far
 /// Can be called with pRun (helper function)
 
-y = 
-    x = 5
-    z = 2
-    x + z
+let ignoreList =
+    let reducer list =
+        match list with
+        | [] -> ()
+        | lst -> lst |> List.reduce (fun a b -> ())
+    pMap reducer
+
+let combineLambdas args body =
+    let rec addLambda lambdas definition =
+        match lambdas with
+        | [] -> definition
+        | (Variable hd)::tl -> addLambda tl (Lambda(hd, definition))
+        | _ -> failwithf "Shouldn't happen"
+    addLambda (List.rev args) body
+
+let combineCalls left right =
+    let rec addArgs args body =
+        match args with
+        | [] -> body
+        | hd::tl -> addArgs tl (DCall(body, hd))
+    addArgs right left
 
 let rec pExpr: Parser<Ast> =
-    let pFuncDefExp, pFuncDefExpRec =
-        let p keyword f =
-            parser {
-                do! pSkipToken (TokSpecOp keyword)
-                let! (Variable id) = pVariable
-                let! value = pMany pVariable
-                do! pSkipToken (TokSpecOp EQUALS)
-                let! body = pExpr
-                return f (id, value, body)
-            }
-        p LET FuncDefExp, p LETREC FuncDefExpRec
-
+    let pFuncDefExp =
+        parser {
+            do! pSkipToken (TokSpecOp DEF)
+            let! (Variable name) = pVariable
+            let! arguments = pMany pVariable
+            do! pSkipToken (TokSpecOp EQUALS)
+            do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
+            let! body = pExpr
+            do! pManyMin1 (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
+            let! expr = pExpr 
+            let definition = combineLambdas arguments body
+            return FuncDefExp(name, definition, expr)
+        }
+    
+    let pCall = 
+        parser {
+            do printf "enter\n"
+            let! left = pExpr
+            let! right = pManyMin1 pExpr
+            do printf "%A, %A" left right
+            return combineCalls left right
+        }
+        
     let pBracketed =
         parser {
             do! pSkipToken (TokSpecOp LRB)
@@ -266,13 +296,41 @@ let rec pExpr: Parser<Ast> =
     let pLambda =
         parser {
             do! pSkipToken (TokSpecOp LAMBDA)
-            let! arg = pExpr
+            let! (Variable id) = pVariable
             do! pSkipToken (TokSpecOp ARROWFUNC)
             let! body = pExpr
-            return Lambda(arg, body)
+            return Lambda(id, body)
+        }
+        
+    // parse full pair
+    let pFullPair =
+        parser {
+            do! pSkipToken (TokSpecOp LSB)
+            let! leftArg = pExpr
+            do! pSkipToken (TokSpecOp COMMA)
+            let! rightArg = pExpr
+            do! pSkipToken (TokSpecOp RSB)
+            return DPair(leftArg, DPair(rightArg, Null))
         }
 
-    let pFuncApp =
+    // parse empty pair
+    let pEmptyPair =
+        parser {
+            do! pSkipToken (TokSpecOp LSB)
+            do! pSkipToken (TokSpecOp RSB)
+            return DPair(Null, Null)
+        }
+
+    // parse empty pair
+    let pHalfPair =
+        parser {
+            do! pSkipToken (TokSpecOp LSB)
+            let! arg = pExpr
+            do! pSkipToken (TokSpecOp RSB)
+            return DPair(arg, Null)
+        }
+
+    let pOperatorApp =
         parser {
             let! leftTree = pVariable <|> pBracketed
             let! operator = pBuiltInFunc
@@ -292,5 +350,5 @@ let rec pExpr: Parser<Ast> =
             let! ifFalse = pBody
             return DCall(DCall(DCall(BuiltInFunc IfThenElse, condition), ifTrue), ifFalse)
         }
-
-    pFuncDefExp <|> pFuncDefExpRec <|> pLambda <|> pIfThenElse <|> pFuncApp <|> pBracketed <|> pChainedFuncApps <|> pVariable <|> pConst
+    
+    pFuncDefExp <|> pLambda <|> pIfThenElse <|> pOperatorApp <|> pBracketed <|> pChainedFuncApps <|> pCall <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst

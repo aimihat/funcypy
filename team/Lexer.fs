@@ -5,7 +5,7 @@ let intChars = ['0';'1';'2';'3';'4';'5';'6';'7';'8';'9']
 let boolMap = Map ["true",true;"false",false]
 let mathMap = Map ["+", Arithm Add; "-", Arithm Subtract;"*", Arithm Multiply;"/", Arithm Divide;"==",Comp Eq;"!=",Comp Ne;"<",Comp Lt;">",Comp Gt;"<=",Comp Le;">=",Comp Ge]
 let spaceMap = Map [" ",Space;"\f",FormFeed;"\n",LineFeed;"\r",CarriageReturn;"\t",HorizontalTab;"\v",VerticalTab]
-let opMap = Map ["[",LSB;"]",RSB;"(",LRB;",",COMMA;"if",IF;"=",EQUALS;"let",LET;"then",THEN;"else",ELSE;")",RRB;"lambda",LAMBDA;"->",ARROWFUNC]
+let opMap = Map ["[",LSB;"]",RSB;"(",LRB;",",COMMA;"if",IF;"=",EQUALS;"def",DEF;"then",THEN;"else",ELSE;")",RRB;"lambda",LAMBDA;"->",ARROWFUNC]
 let unaryMap = Map ["not",NOT;"-",NEGATE]
 
 let keys map =

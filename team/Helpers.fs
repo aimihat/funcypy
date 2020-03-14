@@ -191,7 +191,7 @@ type Operator =
     | LSB 
     | IF 
     | EQUALS 
-    | LET 
+    | DEF 
     | LETREC
     | THEN
     | ELSE

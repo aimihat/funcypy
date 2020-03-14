@@ -176,8 +176,13 @@ let rec Eval (tree: Ast): Ast =
     | _ ->
         Reduce tree
 
-let Interpret (tree: Ast): Ast =
-    tree
-    |> InlineDefs // Substitutes assignments/definitions where they are used.
-    |> Abstract // Abstracts all functions
-    |> Eval // Combinator reduction + builtin functions
+let Interpret tree =
+    match tree with
+    | Some node ->
+        node
+        |> fst
+        |> InlineDefs // Substitutes assignments/definitions where they are used.
+        |> Abstract // Abstracts all functions
+        |> Eval // Combinator reduction + builtin functions
+        |> Some
+    | None -> None

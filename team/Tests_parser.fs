@@ -1,8 +1,91 @@
 module Testing
 
-open Common
+open Helpers
 open Parser
 open Expecto
+    
+    
+// Error  
+let example_1 = """
+def x =
+    2
+"""
+
+// FuncDefExp('x', Ast===2, 'x')
+let example_2 = """
+def x =
+    2
+x
+"""
+
+// FuncDefExp('f', Lambda('x', Ast === 2*x), Call('f', ast === 2))
+let example_3 = """
+def f x = `\noption`
+    2 * x `\n`
+f 2
+"""
+
+// FuncDefExp('f', Lambda('x', Ast === 2*x), Call('f', ast === 2))
+let example_3_2 = """
+def f = lambda x -> x*2
+f 2
+"""
+
+// FuncDefExp('x', 2, FuncDefExp('y', 2, 'x'))
+let example_4 = """
+def x = 2
+def y = 2
+x
+"""
+
+// FuncDefExp('f', Lambda('x', Lambda('y', AST=== 2*x)), Call(Call('f','2'), '3')))
+let example_5 = """
+def f x y = 2*x 
+f 2 3
+"""
+
+// FuncDefExp('f', Lambda('y',  FuncDefExp('x', 2, x*y)), Call('f', 2))
+let example_6 = """
+def f y =
+    def x = 2
+    x * y
+f 2
+"""
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    (*
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
 // 5 + 10
 let tokenInput1 = [TokLit (Int 5); TokBuiltInOp ADD; TokLit (Int 10)]
@@ -92,3 +175,5 @@ let parserTestListWithExpecto =
 
 let parserTestsWithExpecto() =
     runTests defaultConfig parserTestListWithExpecto |> ignore
+    
+    *)
