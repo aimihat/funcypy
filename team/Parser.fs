@@ -276,18 +276,6 @@ let rec pExpr: Parser<Ast> =
             return FuncDefExp(name, definition, expr)
         }
     
-    // so this has an error even if it isnt called
-    // 
-    let pCall = 
-        parser {
-            do printf "entered pCall \n" // runs this line when initialising
-            let! left = pVariable // problem is here because it doesnt get pExpr but not sure why
-            do printf "got left \n %A" left
-            let! right = pManyMin1 pExpr
-            do printf "got left \n %A" right
-            return combineCalls left right
-        }
-        
     let pBracketed =
         parser {
             do! pSkipToken (TokSpecOp LRB)
@@ -295,6 +283,14 @@ let rec pExpr: Parser<Ast> =
             do! pSkipToken (TokSpecOp RRB)
             return e
         }
+    
+    let pCall = 
+        parser {
+            let! left = pVariable <|> pBracketed // problem is here because it doesnt get pExpr but not sure why
+            let! right = pManyMin1 pExpr
+            return combineCalls left right
+        }
+
 
     let pLambda =
         parser {
@@ -344,13 +340,12 @@ let rec pExpr: Parser<Ast> =
 
     let pIfThenElse =
         parser {
-            let pBody = pChainedFuncApps <|> pBracketed <|> pVariable <|> pConst
             do! pSkipToken (TokSpecOp IF)
-            let! condition = pVariable <|> pBracketed
+            let! condition = pVariable <|> pConst <|> pBracketed
             do! pSkipToken (TokSpecOp THEN) 
-            let! ifTrue = pBody
+            let! ifTrue = pExpr
             do! pSkipToken (TokSpecOp ELSE)
-            let! ifFalse = pBody
+            let! ifFalse = pExpr
             return DCall(DCall(DCall(BuiltInFunc IfThenElse, condition), ifTrue), ifFalse)
         }
     
