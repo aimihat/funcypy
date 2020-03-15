@@ -280,6 +280,7 @@ let rec pExpr: Parser<Ast> =
         parser {
             do! pSkipToken (TokSpecOp LRB)
             let! e = pExpr
+            do printf "\n pBracketed %A" e
             do! pSkipToken (TokSpecOp RRB)
             return e
         }
@@ -287,6 +288,7 @@ let rec pExpr: Parser<Ast> =
     let pCall = 
         parser {
             let! left = pVariable <|> pBracketed // problem is here because it doesnt get pExpr but not sure why
+            do printf "\n%A entered pCall" left 
             let! right = pManyMin1 pExpr
             return combineCalls left right
         }
@@ -332,6 +334,7 @@ let rec pExpr: Parser<Ast> =
     let pOperatorApp =
         parser {
             let! leftTree = pVariable <|> pBracketed
+            do printf "\n lefttree: %A" leftTree
             let! operator = pBuiltInFunc
             let! rightList = pManyMin1 (pVariable <|> pConst <|> pBracketed)
             let rightTree = rightList |> List.reduce (fun acc e -> DCall(acc, e))
@@ -350,4 +353,4 @@ let rec pExpr: Parser<Ast> =
         }
     
     // even if you remove call from here it still doesnt work
-    pCall <|> pFuncDefExp <|> pLambda <|> pIfThenElse <|> pOperatorApp <|> pBracketed <|> pChainedFuncApps <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst
+    pFuncDefExp <|> pLambda <|> pCall <|> pIfThenElse <|> pBracketed <|> pOperatorApp <|> pChainedFuncApps <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst
