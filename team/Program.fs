@@ -33,7 +33,9 @@ let main argv =
        printf "-----------------------------------"
        printf "\ndef f x y = (2 * x + y) \n f 2 3\n %A\n" <| ("def f x y = (2 * x + y) \n f 2 3" |> tokeniser |> pRun pExpr |> Interpret)
        printf "-----------------------------------"
+       printf "start\n"
        printf "\ndef f x y = 2 * (x + y) \n f 2 3\n %A\n" <| ("def f x y = 2 * (x + y) \n f 2 3" |> tokeniser |> pRun pExpr |> Interpret)
+       printf "end\n"
        printf "-----------------------------------"
        printf "\ndef f x y = (2 * x) + y \n f 2 3\n %A\n" <| ("def f x y = (2 * x) + y \n f 2 3" |> tokeniser |> pRun pExpr |> Interpret)
        printf "-----------------------------------"
@@ -44,8 +46,8 @@ let main argv =
        printf "\ndef f x y = (2 * ((x) + (y))) \n f 2 3\n %A\n" <| ("def f x y = (2 * ((x) + (y))) \n f 2 3" |> tokeniser |> pRun pExpr |> Interpret)
 
        // this shoulf fail -> if the index is not equal to the number of tokens then it should fail
-       printf "\n%A" <| ("((5)))" |> tokeniser |> pRun pExpr)
-       printf "\n%A" <| ("(((5)))" |> tokeniser |> pRun pExpr)
+//       printf "\n%A" <| ("((5)))" |> tokeniser |> pRun pExpr)
+//       printf "\n%A" <| ("(((5)))" |> tokeniser |> pRun pExpr)
 
        // printf "%A\n" <| (testString2 |> tokeniser)
        // printf "%A\n" <| (testString3 |> tokeniser)
