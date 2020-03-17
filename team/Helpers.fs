@@ -4,8 +4,6 @@ open System.Collections.Generic
 
 
 /////// Type definitions ///////
-
-
 type Identifier = string
 
 // Built-in functions and operations
