@@ -1,0 +1,1 @@
+/usr/local/share/dotnet/dotnet "src/bin/Debug/netcoreapp3.1/Interpreter.dll" $1
