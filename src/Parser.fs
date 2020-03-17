@@ -331,11 +331,13 @@ let rec pExpr: Parser<Ast> =
 
     let pOperatorApp =
         parser {
-            let! leftTree = pVariable <|> pBracketed
+            let! leftTree = pVariable <|> pConst <|> pBracketed
             let! operator = pBuiltInFunc
             let! rightList = pManyMin1 (pVariable <|> pConst <|> pBracketed)
-            let rightTree = rightList |> List.reduce (fun acc e -> DCall(acc, e))
-            return DCall(DCall(operator, leftTree), rightTree)
+            let initialAcc = DCall(DCall(operator, leftTree), rightList.Head)
+            let res = rightList.Tail |> List.fold (fun acc e -> DCall(DCall(operator, acc), e)) initialAcc
+            do printf "%A\n" rightList
+            return res
         }
 
     let pIfThenElse =
@@ -350,4 +352,4 @@ let rec pExpr: Parser<Ast> =
         }
     
     // even if you remove call from here it still doesnt work
-    pCall <|> pFuncDefExp <|> pLambda <|> pIfThenElse <|> pOperatorApp <|> pBracketed <|> pChainedFuncApps <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst
+    pFuncDefExp <|> pIfThenElse <|> pLambda <|> pCall <|> pBracketed <|> pChainedFuncApps <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst

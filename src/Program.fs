@@ -14,7 +14,7 @@ let inline printChain i =
 [<EntryPoint>]
 let main argv =
     let BuiltInCode = loadCode "src/mainlib/builtin.fpy"
-    match argv with 
+    match [|"test_code.fpy"|] with 
     | [|path|] -> 
         let CombinedCode =
             try
@@ -28,12 +28,13 @@ let main argv =
         //Append built-in definitions to user code
         
         let result =
-            CombinedCode |> printChain
-            |> Option.map tokeniser |> printChain
-            |> Option.map (pRun pExpr) |> printChain
-            |> Option.map Interpret |> printChain
-            
-        printf "\n%A" result //TODO: pretty print
+            CombinedCode |> Option.map tokeniser
+            |> Option.map (pRun pExpr)
+            |> Option.map Interpret
+        printf "%A" result
+//        match result with
+//        | Some (Some res) -> printf "%s" <| PrintTree res
+//        | _ -> printf "Did not find evaluate.\n"
     | _ -> printf "Must enter a .fpy file to execute.\n"
 
     
@@ -67,5 +68,4 @@ let main argv =
 //     let tokenTest8 = [TokSpecOp LRB ; TokSpecOp LAMBDA ; TokIdentifier "x" ; TokSpecOp ARROWFUNC ; TokIdentifier "x" ; TokBuiltInOp (Arithm Add) ; TokLit (Int 1) ; TokSpecOp RRB ; TokLit (Int 2)]
 //     printf "%A" <| (pRun pExpr tokenTest8)
     // runTestsInAssemblyWithCLIArgs [] [||] |> ignore
-    System.Console.ReadKey() |> ignore
     0

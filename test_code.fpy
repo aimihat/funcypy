@@ -1,1 +1,4 @@
-f 2 3
+def tempFtoC Ftemp =
+	def p = Ftemp-32
+	p
+tempFtoC 32

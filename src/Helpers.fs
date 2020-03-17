@@ -3,9 +3,8 @@ module Helpers
 open System.Collections.Generic
 open System.IO
 
+
 /////// Type definitions ///////
-
-
 type Identifier = string
 
 // Built-in functions and operations
@@ -216,4 +215,3 @@ let loadCode file =
     let baseDirectory' = Directory.GetParent(baseDirectory)
     Path.Combine(baseDirectory'.FullName, file)
     |> System.IO.File.ReadAllText
-

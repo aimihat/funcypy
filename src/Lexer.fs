@@ -1,10 +1,11 @@
 module Lexer
 open Helpers
 
-let intChars = ['0';'1';'2';'3';'4';'5';'6';'7';'8';'9']
+let intChars = ['0' .. '9']
+let alphaNumeric = ['a' .. 'z'] @ ['A' .. 'Z'] @ intChars
 let boolMap = Map ["true",true;"false",false]
 let mathMap = Map ["+", Arithm Add; "-", Arithm Subtract;"*", Arithm Multiply;"/", Arithm Divide;"==",Comp Eq;"!=",Comp Ne;"<",Comp Lt;">",Comp Gt;"<=",Comp Le;">=",Comp Ge]
-let spaceMap = Map [" ",Space;"\f",FormFeed;"\n",LineFeed;"\r",CarriageReturn;"\t",HorizontalTab;"\v",VerticalTab]
+let spaceMap = Map ["\n",LineFeed]
 let opMap = Map ["[",LSB;"]",RSB;"(",LRB;",",COMMA;"if",IF;"=",EQUALS;"def",DEF;"then",THEN;"else",ELSE;")",RRB;"lambda",LAMBDA;"->",ARROWFUNC]
 let unaryMap = Map ["not",NOT;"-",NEGATE]
 
@@ -54,8 +55,8 @@ let tokeniser (str: string) =
     //extractWord: get the next "word", defined by all the characters between two spaces/current space until the end of string
     let rec extractWord (acc,lst) =
         match lst with
-        | hd::tl when not (hd = ' ') -> extractWord (acc @ [hd],tl)
-        | hd::tl -> (charstring acc,tl)
+        | hd::tl when List.exists (fun el -> el = hd) (alphaNumeric) -> extractWord (acc @ [hd],tl)
+        | hd::tl -> (charstring acc,hd::tl)
         | [] -> (charstring acc,[])
     //buildString: a " has been found, build string until another " is found
     let buildString (tokLst,otherLst) =
@@ -81,17 +82,7 @@ let tokeniser (str: string) =
                 | TokLit (Int _) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
                 | TokLit (Double _) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
                 | _ -> buildNum (toks,others,false)
-            | hd::tl when hd = ' ' ->
-                match skipSpaces tl  with
-                | hd::tl when List.exists (fun el -> el = hd) intChars -> (toks @ [TokBuiltInOp (Arithm Subtract)],others) // - #
-                | '-'::hd::tl when List.exists (fun el -> el = hd) intChars -> (toks @ [TokBuiltInOp (Arithm Subtract)],others) // - -#
-                | hd::tl -> (toks @ [TokUnaryOp (NEGATE)],others)
-                | [] -> //reached end of string
-                    match tokLst |> List.rev |> skipSpaceToks |> List.head with // # -
-                    | TokLit (Int _) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
-                    | TokLit (Double _) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
-                    | TokBuiltInOp _ -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
-                    | _ -> (toks @ [TokUnaryOp (NEGATE)],others)
+            | hd::tl when hd = ' ' -> dashID (toks,tl)
             | hd::tl when inMap mathMap (string hd) -> // - +
                 match tokLst |> List.rev |> List.head with // #-#
                 | TokLit (Int _) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
@@ -110,7 +101,11 @@ let tokeniser (str: string) =
                 | _ -> (toks @ [TokUnaryOp (NEGATE)],others)
             | _ -> (toks @ [TokUnaryOp (NEGATE)],others)
         match otherLst with
-        | hd::tl when hd = ' ' -> tokenise (tokLst @ [TokWhitespace Space],tl)
+        | hd::tl when hd = ' ' -> tokenise (tokLst,tl)
+        | hd::tl when hd = '\t' -> tokenise (tokLst,tl)
+        | hd::tl when hd = '\v' -> tokenise (tokLst,tl)
+        | hd::tl when hd = '\r' -> tokenise (tokLst,tl)
+        | hd::tl when hd = '\f' -> tokenise (tokLst,tl)
         | hd::tl when hd = '-' -> tokenise (dashID (tokLst,tl))
         | hd::tl when hd = '\"' -> tokenise (buildString (tokLst,tl))
         | hd::tl when List.exists (fun el -> el = hd) intChars -> tokenise (buildNum (tokLst,otherLst,true))
