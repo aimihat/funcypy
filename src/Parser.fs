@@ -203,42 +203,6 @@ let pSpecOp = pSatisfy isOperator |>> fun tok ->
         | TokSpecOp op -> op
         | _ -> failwith "Expected Operator but did not receive Operator"
 
-// Single term in expression is either constant or variable
-let pTerm = pConst <|> pVariable
-
-// pOp Skips the operator and builds an FuncApp AST
-let pOp opTok operator =
-    pSkipToken opTok |>> fun c leftTree rightTree -> DCall(DCall((BuiltInFunc operator), leftTree), rightTree)
-
-let pAdd = pOp (TokBuiltInOp (Arithm Add)) (Arithm Add)
-let pSubtract = pOp (TokBuiltInOp (Arithm Subtract)) (Arithm Subtract)
-let pMultiply = pOp (TokBuiltInOp (Arithm Multiply)) (Arithm Multiply)
-let pDivide = pOp (TokBuiltInOp (Arithm Divide)) (Arithm Divide)
-
-
-let pLessThan = pOp (TokBuiltInOp (Comp Lt)) (Comp Lt)
-let pLessThanOrEq = pOp (TokBuiltInOp (Comp Le)) (Comp Le)
-let pGreaterThan = pOp (TokBuiltInOp (Comp Gt)) (Comp Gt)
-let pGreaterThanOrEq = pOp (TokBuiltInOp (Comp Ge)) (Comp Ge)
-let pEqualTo = pOp (TokBuiltInOp (Comp Eq)) (Comp Eq)
-let pNotEqualTo = pOp (TokBuiltInOp (Comp Ne)) (Comp Ne)
-
-
-// Define precedence of basic BuiltInType operators
-let pAllOp = pAdd <|> pSubtract <|> pMultiply <|> pDivide // not currently being used
-let pmultiOrDivide = pMultiply <|> pDivide
-let paddOrSubtract = pAdd <|> pSubtract
-let pchainMultiDivide = pChainlMin1 pTerm pmultiOrDivide
-let pchainAddSubtract = pChainlMin1 pchainMultiDivide paddOrSubtract
-
-let pCompOps = pLessThan <|> pLessThanOrEq <|> pGreaterThan <|> pGreaterThanOrEq <|> pEqualTo <|> pNotEqualTo
-
-// Top level chained Function application parser with operator precedence integrated
-let pChainedFuncApps = pChainlMin1 pchainAddSubtract pCompOps
-
-/// Top Level AST expression parser that combines everything we've done so far
-/// Can be called with pRun (helper function)
-
 let ignoreList =
     let reducer list =
         match list with
@@ -261,6 +225,15 @@ let combineCalls left right =
         | hd::tl -> addArgs tl (DCall(body, hd))
     addArgs right left
 
+let combinePairs left right =
+    let rec addArgs args body =
+        match args with
+        | [] -> body
+        | hd::tl -> addArgs tl (DPair(body, hd))
+    addArgs right left
+
+/// Top Level AST expression parser that combines everything we've done so far
+/// Can be called with pRun (helper function)
 let rec pExpr: Parser<Ast> =
     let pFuncDefExp =
         parser {
@@ -300,16 +273,25 @@ let rec pExpr: Parser<Ast> =
             let! body = pExpr
             return Lambda(id, body)
         }
-        
+
+    let pNextPair = 
+        parser {
+            do! pSkipToken (TokSpecOp COMMA) 
+            let! nextTerm = pExpr
+            return nextTerm
+        }
+
+    // Pair[Pair[Pair[a, b], c],Null] Pair[null, null], Pair[a, null] 
     // parse full pair
     let pFullPair =
         parser {
             do! pSkipToken (TokSpecOp LSB)
             let! leftArg = pExpr
-            do! pSkipToken (TokSpecOp COMMA)
-            let! rightArg = pExpr
+            let! rightArg = pManyMin1 pNextPair // this would get the entire list of values and remove commas but how do we return them wrapped correctly
             do! pSkipToken (TokSpecOp RSB)
-            return DPair(leftArg, DPair(rightArg, Null))
+            let list = combinePairs leftArg rightArg
+            return DPair(list, Null)
+            // return DPair(leftArg, DPair(rightArg, Null))
         }
 
     // parse empty pair
@@ -331,12 +313,29 @@ let rec pExpr: Parser<Ast> =
 
     let pOperatorApp =
         parser {
-            let! leftTree = pVariable <|> pConst <|> pBracketed
-            let! operator = pBuiltInFunc
-            let! rightList = pManyMin1 (pVariable <|> pConst <|> pBracketed)
-            let initialAcc = DCall(DCall(operator, leftTree), rightList.Head)
-            let res = rightList.Tail |> List.fold (fun acc e -> DCall(DCall(operator, acc), e)) initialAcc
-            do printf "%A\n" rightList
+            // pOp Skips the operator and builds an FuncApp AST
+            let pOp opTok operator =
+                pSkipToken opTok |>> fun c leftTree rightTree -> DCall(DCall((BuiltInFunc operator), leftTree), rightTree)
+            let pAdd = pOp (TokBuiltInOp (Arithm Add)) (Arithm Add)
+            let pSubtract = pOp (TokBuiltInOp (Arithm Subtract)) (Arithm Subtract)
+            let pMultiply = pOp (TokBuiltInOp (Arithm Multiply)) (Arithm Multiply)
+            let pDivide = pOp (TokBuiltInOp (Arithm Divide)) (Arithm Divide)
+
+            let pLessThan = pOp (TokBuiltInOp (Comp Lt)) (Comp Lt)
+            let pLessThanOrEq = pOp (TokBuiltInOp (Comp Le)) (Comp Le)
+            let pGreaterThan = pOp (TokBuiltInOp (Comp Gt)) (Comp Gt)
+            let pGreaterThanOrEq = pOp (TokBuiltInOp (Comp Ge)) (Comp Ge)
+            let pEqualTo = pOp (TokBuiltInOp (Comp Eq)) (Comp Eq)
+            let pNotEqualTo = pOp (TokBuiltInOp (Comp Ne)) (Comp Ne)
+
+            // Define precedence of basic BuiltInType operators
+            let pAllOp = pMultiply <|> pDivide <|> pAdd <|> pSubtract
+            let pSubTerm = pBracketed <|> pVariable <|> pConst
+            let pChainOperatorApp = pChainlMin1 pSubTerm pAllOp
+            let pCompOps = pLessThan <|> pLessThanOrEq <|> pGreaterThan <|> pGreaterThanOrEq <|> pEqualTo <|> pNotEqualTo
+
+            let pChainedFuncApps = pChainlMin1 pChainOperatorApp pCompOps
+            let! res = pChainedFuncApps
             return res
         }
 
@@ -352,4 +351,4 @@ let rec pExpr: Parser<Ast> =
         }
     
     // even if you remove call from here it still doesnt work
-    pFuncDefExp <|> pIfThenElse <|> pLambda <|> pCall <|> pBracketed <|> pChainedFuncApps <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst
+    pFuncDefExp <|> pIfThenElse <|> pLambda <|> pCall <|> pOperatorApp <|> pBracketed <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst

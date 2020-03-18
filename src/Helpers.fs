@@ -65,15 +65,19 @@ let getID node =
     | Call(_,_,id) -> id
     | other -> L other
 
+// Leads to random test case fails -> not all the time
 let GetMemoOrAdd IDs f node =
     // Get memoised result, if exists
     // Otherwise, saves evaluation and returns it
+    f node
+    (* Disabling memoisation, since tests run async and don't support global/mutable vars.
     match EvaluationMemo.TryGetValue IDs with
     | true, result -> result
     | false, _ ->
         let result = f node
         EvaluationMemo.TryAdd(IDs, result) |> ignore
-        result
+        result*)
+
 
 let DCall(e1, e2) =
     // Constructs a `Call` with Default ID
