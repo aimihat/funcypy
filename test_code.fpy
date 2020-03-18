@@ -1,4 +1,4 @@
 def tempFtoC Ftemp =
-	def p = Ftemp-32
-	p
+	def p = Ftemp+32
+	p*4/5.0
 tempFtoC 32

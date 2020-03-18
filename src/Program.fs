@@ -28,13 +28,14 @@ let main argv =
         //Append built-in definitions to user code
         
         let result =
-            CombinedCode |> Option.map tokeniser
+            CombinedCode
+            |> Option.map tokeniser
             |> Option.map (pRun pExpr)
             |> Option.map Interpret
-        printf "%A" result
-//        match result with
-//        | Some (Some res) -> printf "%s" <| PrintTree res
-//        | _ -> printf "Did not find evaluate.\n"
+
+        match result with
+        | Some (Some res) -> printf "%s" <| PrintTree res
+        | _ -> printf "Did not find evaluate.\n"
     | _ -> printf "Must enter a .fpy file to execute.\n"
 
     
