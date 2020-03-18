@@ -45,6 +45,15 @@ let main argv =
        printf "-----------------------------------"
        printf "\ndef f x y = (2 * ((x) + (y))) \n f 2 3\n %A\n" <| ("def f x y = (2 * ((x) + (y))) \n f 2 3" |> tokeniser |> pRun pExpr |> Interpret)
 
+       let emptyPair = [TokSpecOp LSB ; TokSpecOp RSB]
+       let singlePair = [TokSpecOp LSB ; TokLit (Int 1) ; TokSpecOp RSB]
+       let twoPair = [TokSpecOp LSB ; TokLit (Int 5) ; TokSpecOp COMMA ; TokLit (Int 6) ; TokSpecOp RSB]
+       let threePair = [TokSpecOp LSB ; TokLit (Int 2) ; TokSpecOp COMMA ; TokLit (Int 3) ; TokSpecOp COMMA ; TokLit (Int 4) ; TokSpecOp RSB]
+       
+       printf "\n%A" <| (pRun pExpr emptyPair)
+       printf "\n%A" <| (pRun pExpr singlePair)
+       printf "\n%A" <| (pRun pExpr twoPair)
+       printf "\n%A" <| (pRun pExpr threePair)
        // this shoulf fail -> if the index is not equal to the number of tokens then it should fail
 //       printf "\n%A" <| ("((5)))" |> tokeniser |> pRun pExpr)
 //       printf "\n%A" <| ("(((5)))" |> tokeniser |> pRun pExpr)

@@ -225,6 +225,13 @@ let combineCalls left right =
         | hd::tl -> addArgs tl (DCall(body, hd))
     addArgs right left
 
+let combinePairs left right =
+    let rec addArgs args body =
+        match args with
+        | [] -> body
+        | hd::tl -> addArgs tl (DPair(body, hd))
+    addArgs right left
+
 /// Top Level AST expression parser that combines everything we've done so far
 /// Can be called with pRun (helper function)
 let rec pExpr: Parser<Ast> =
@@ -266,16 +273,25 @@ let rec pExpr: Parser<Ast> =
             let! body = pExpr
             return Lambda(id, body)
         }
-        
+
+    let pNextPair = 
+        parser {
+            do! pSkipToken (TokSpecOp COMMA) 
+            let! nextTerm = pExpr
+            return nextTerm
+        }
+
+    // Pair[Pair[Pair[a, b], c],Null] Pair[null, null], Pair[a, null] 
     // parse full pair
     let pFullPair =
         parser {
             do! pSkipToken (TokSpecOp LSB)
             let! leftArg = pExpr
-            do! pSkipToken (TokSpecOp COMMA)
-            let! rightArg = pExpr
+            let! rightArg = pManyMin1 pNextPair // this would get the entire list of values and remove commas but how do we return them wrapped correctly
             do! pSkipToken (TokSpecOp RSB)
-            return DPair(leftArg, DPair(rightArg, Null))
+            let list = combinePairs leftArg rightArg
+            return DPair(list, Null)
+            // return DPair(leftArg, DPair(rightArg, Null))
         }
 
     // parse empty pair
@@ -313,27 +329,15 @@ let rec pExpr: Parser<Ast> =
             let pNotEqualTo = pOp (TokBuiltInOp (Comp Ne)) (Comp Ne)
 
             // Define precedence of basic BuiltInType operators
-            let pmultiOrDivide = pMultiply <|> pDivide
-            let paddOrSubtract = pAdd <|> pSubtract
-            let pAllOp = pmultiOrDivide <|> paddOrSubtract // not currently being used - can this implement priority?
-            // Single term in expression is either constant or variable
+            let pAllOp = pMultiply <|> pDivide <|> pAdd <|> pSubtract
             let pSubTerm = pBracketed <|> pVariable <|> pConst
             let pChainOperatorApp = pChainlMin1 pSubTerm pAllOp
-            // let  = pChainlMin1 pChainMultiDivide paddOrSubtract
-
             let pCompOps = pLessThan <|> pLessThanOrEq <|> pGreaterThan <|> pGreaterThanOrEq <|> pEqualTo <|> pNotEqualTo
+
             let pChainedFuncApps = pChainlMin1 pChainOperatorApp pCompOps
-            // Top level chained Function application parser with operator precedence integrated
             let! res = pChainedFuncApps
             return res
         }
-
-    // let! leftTree = pSubTerm
-    // let! operator = pBuiltInFunc
-    // let! rightList = pManyMin1 pSubTerm
-    // let initialAcc = DCall(DCall(operator, leftTree), rightList.Head)
-    // let res = rightList.Tail |> List.fold (fun acc e -> DCall(DCall(operator, acc), e)) initialAcc
-    // do printf "%A\n" rightList
 
     let pIfThenElse =
         parser {
