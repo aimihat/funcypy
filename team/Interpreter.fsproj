@@ -13,6 +13,7 @@
         <Compile Include="Tests_lexer.fs" />
         <Compile Include="Tests_parser.fs" />
         <Compile Include="Tests_combinator.fs" />
+        <Compile Include="Tests_end_to_end.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 

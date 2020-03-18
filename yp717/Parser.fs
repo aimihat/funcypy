@@ -1,14 +1,4 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-module rec Parser
-
-// open Lexer James module
-=======
 module Parser
->>>>>>> 5df67b029267b4fb1f2a63a81340acdc28700090
-=======
-module Parser
->>>>>>> 18430ecc3904b8a8bddd47917fc0902cd49d61d1
 
 /// Things that may be used by other modules such as Tokeniser and Runtimes
 /// included in Common Module (e.g. AST, Token definitions)

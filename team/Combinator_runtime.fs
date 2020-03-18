@@ -173,7 +173,7 @@ let rec Eval (tree: Ast): Ast =
     | Pair(e1, e2, _) ->
         let IDs = getID e1, getID e2
         GetMemoOrAdd IDs Reduce tree
-    | _ ->
+    | _ -> 
         Reduce tree
 
 let Interpret tree =
