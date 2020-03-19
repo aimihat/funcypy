@@ -1,6 +1,7 @@
 ﻿open Expecto
 open EndToEndTests
 open ParserTests
+open TestsLexer
 open Lexer
 open Parser
 open Combinator_runtime
@@ -16,9 +17,10 @@ let inline printChain i =
 [<EntryPoint>]
 let main argv =
     // Running tests - development
-    endToEndTestsWithExpecto() |> ignore
+    lexerTestsWithExpecto() |> ignore
     parserTestsWithExpecto() |> ignore
-        
+    endToEndTestsWithExpecto() |> ignore
+
     // Running file - release
     (*
     let BuiltInCode = loadCode "src/mainlib/builtin.fpy"

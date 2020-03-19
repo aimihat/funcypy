@@ -1,81 +1,88 @@
-module Testslexer
+module TestsLexer
 
 open Expecto
 open Helpers
 open Lexer
 
 [<Tests>]
-let Test1 =
- testCase "Integer Test" <| fun () ->
-   let expected = [TokLit (Int 1)]
-   Expect.equal (tokeniser "1") expected "Tokenise an integer"
+let lexerTestListWithExpecto =
+   testList "Lexer Tests with Expecto" [
+      test "Lexer Test 1" {
+         let expected = [TokLit (Int -1)]
+         Expect.equal (tokeniser "-1") expected "Tokenise negative number"
+      }
+      
+      test "Lexer Test 2" {
+         let expected = [TokLit (Int -1)]
+         Expect.equal (tokeniser "- 1") expected "Tokenise negative number - check ignoring spaces"
+      }
+        
+        
+      test "Lexer Test 3" {
+         let expected = [TokUnaryOp NEGATE; TokIdentifier "x"]
+         Expect.equal (tokeniser "-x") expected "Tokenise negated variable"
+      }
+      
+      test "Lexer Test 4" {
+         let expected = [TokLit (Int 1); TokBuiltInOp (Arithm Subtract); TokLit (Int 1)]
+         Expect.equal (tokeniser "1 - 1") expected "Tokenise number minus number"
+      }
+        
+      test "Lexer Test 5" {
+         let expected = [TokLit (Int 1); TokBuiltInOp (Arithm Subtract); TokIdentifier "x"]
+         Expect.equal (tokeniser "1 - x") expected "Tokenise number minus variable"
+      }
 
-[<Tests>]
-let Test2 =
- testCase "Whitespaces" <| fun () ->
-   let expected = [TokWhitespace Space; TokWhitespace Space; TokWhitespace Space; TokWhitespace Space; TokWhitespace Space]
-   Expect.equal (tokeniser "     ") expected "Tokenise whitespaces"
+      test "Lexer Test 6" {
+         let expected = [TokIdentifier "x"; TokBuiltInOp (Arithm Subtract); TokLit (Int 1)]
+         Expect.equal (tokeniser "x - 1") expected "Tokenise variable minus number"
+      }
 
-[<Tests>]
-let Test3 =
- testCase "Equation test true" <| fun () ->
-   let expected = [TokLit (Int 1); TokBuiltInOp (Arithm Add); TokLit (Int 1); TokSpecOp EQUALS; TokLit (Int 2)]
-   Expect.equal (tokeniser "1+1=2") expected "Tokenise a valid equation"
+      test "Lexer Test 7" {
+         let expected = [TokIdentifier "x"; TokBuiltInOp (Arithm Subtract); TokIdentifier "x"]
+         Expect.equal (tokeniser "x - x") expected "Tokenise variable minus variable"
+      }
+        
+      test "Lexer Test 8" {
+         let expected = [TokLit (Int 1); TokBuiltInOp (Arithm Subtract); TokLit (Int -1)]
+         Expect.equal (tokeniser "1 - - 1") expected "Tokenise number minus negative number"
+      }
 
-[<Tests>]
-let Test4 =
- testCase "Equation test false" <| fun () ->
-   let expected = [TokLit (Int 1); TokBuiltInOp (Arithm Add); TokLit (Int 1); TokBuiltInOp (Comp Eq); TokLit (Int 2)]
-   Expect.equal (tokeniser "1+1==2") expected "Tokenise an invalid equation"
+      test "Lexer Test 9" {
+         let expected = [TokLit (Int 1); TokBuiltInOp (Arithm Subtract); TokUnaryOp NEGATE; TokIdentifier "x"]
+         Expect.equal (tokeniser "1 - - x") expected "Tokenise number minus negated variable"
+      }
+        
+      test "Lexer Test 10" {
+         let expected = [TokIdentifier "x"; TokBuiltInOp (Arithm Subtract); TokLit (Int -1)]
+         Expect.equal (tokeniser "x - - 1") expected "Tokenise variable minus negative number"
+      }
+          
+      test "Lexer Test 11" {
+         let expected = [TokIdentifier "x"; TokBuiltInOp (Arithm Subtract); TokUnaryOp NEGATE; TokIdentifier "x"]
+         Expect.equal (tokeniser "x - - x") expected "Tokenise variable minus negated variable"
+      }
+        
+      test "Lexer Test 12" {
+         let expected = [TokLit (Int -1); TokBuiltInOp (Arithm Subtract); TokLit (Int -1)]
+         Expect.equal (tokeniser "- 1 - - 1") expected "Tokenise negative number minus negative number"
+      }
 
-[<Tests>]
-let Test5 =
- testCase "Equation test true with spaces" <| fun () ->
-   let expected = [TokWhitespace Space; TokLit (Int 1); TokWhitespace Space; TokBuiltInOp (Arithm Add); TokWhitespace Space; TokLit (Int 1); TokWhitespace Space; TokSpecOp EQUALS; TokWhitespace Space; TokLit (Int 2); TokWhitespace Space]
-   Expect.equal (tokeniser " 1 + 1 = 2 ") expected "Tokenise a valid equation with spaces between every character"
+      test "Lexer Test 13" {
+         let expected = [TokLit (Int -1); TokBuiltInOp (Arithm Subtract); TokUnaryOp NEGATE; TokIdentifier "x"]
+         Expect.equal (tokeniser "- 1 - - x") expected "Tokenise negative number minus negated variable"
+      }
 
-[<Tests>]
-let Test6 =
- testCase "DashID: Subtract, Negative, NEGATE or ARROWFUNC 1" <| fun () ->
-   let expected = [TokLit (Int 1); TokBuiltInOp (Arithm Subtract); TokLit (Int 1); TokSpecOp EQUALS; TokLit (Int 0)]
-   Expect.equal (tokeniser "1-1=0") expected "Tokenise as subtract (no spaces)"
+      test "Lexer Test 14" {
+         let expected = [TokUnaryOp NEGATE; TokIdentifier "x"; TokBuiltInOp (Arithm Subtract); TokLit (Int -1)]
+         Expect.equal (tokeniser "- x - - 1") expected "Tokenise negated variable minus negative number"
+      }
+        
+      test "Lexer Test 15" {
+         let expected = [TokUnaryOp NEGATE; TokIdentifier "x"; TokBuiltInOp (Arithm Subtract); TokUnaryOp NEGATE; TokIdentifier "x"]
+         Expect.equal (tokeniser "- x - - x") expected "Tokenise negated variable minus negated variable"
+      }
+   ]
 
-[<Tests>]
-let Test7 =
- testCase "DashID: Subtract, Negative, NEGATE or ARROWFUNC 2" <| fun () ->
-   let expected = [TokLit (Int 1); TokWhitespace Space; TokBuiltInOp (Arithm Subtract); TokWhitespace Space; TokLit (Int 1); TokWhitespace Space; TokSpecOp EQUALS; TokWhitespace Space; TokLit (Int 0)]
-   Expect.equal (tokeniser "1 - 1 = 0") expected "Tokenise as subtract (spaces)"
-
-[<Tests>]
-let Test8 =
- testCase "DashID: Subtract, Negative, NEGATE or ARROWFUNC 3" <| fun () ->
-   let expected = [TokLit (Int 1); TokWhitespace Space; TokLit (Int -1); TokWhitespace Space; TokSpecOp EQUALS; TokWhitespace Space; TokLit (Int 0)]
-   Expect.equal (tokeniser "1 -1 = 0") expected "Tokenise as negative integer"
-   
-[<Tests>]
-let Test9 =
- testCase "DashID: Subtract, Negative, NEGATE or ARROWFUNC 4" <| fun () ->
-   let expected =  [TokLit (Int 1); TokBuiltInOp (Arithm Subtract); TokLit (Int -1); TokWhitespace Space; TokSpecOp EQUALS; TokWhitespace Space; TokLit (Int 0)]
-   Expect.equal (tokeniser "1--1 = 0") expected "Tokenise as subtract followed by negative integer"
-
-[<Tests>]
-let Test10 =
- testCase "DashID: Subtract, Negative, NEGATE or ARROWFUNC 5" <| fun () ->
-   let expected = [TokLit (Int 1); TokSpecOp ARROWFUNC; TokLit (Int 1); TokWhitespace Space; TokSpecOp EQUALS; TokWhitespace Space; TokLit (Int 0)]
-   Expect.equal (tokeniser "1->1 = 0") expected "Tokenise as arrow"
-
-[<Tests>]
-let Test11 =
- testCase "DashID: Subtract, Negative, NEGATE or ARROWFUNC 6" <| fun () ->
-   let expected = [TokLit (Int 1); TokWhitespace Space; TokSpecOp ARROWFUNC; TokBuiltInOp (Arithm Subtract); TokWhitespace Space; TokLit (Int 1); TokWhitespace Space; TokSpecOp EQUALS; TokWhitespace Space; TokLit (Int 0)]
-   Expect.equal (tokeniser "1 ->- 1 = 0") expected "Tokenise as arrow followed by subtract"
-
-[<Tests>]
-let Test12 =
- testCase "DashID: Subtract, Negative, NEGATE or ARROWFUNC 7" <| fun () ->
-   let expected = [TokLit (Int 1); TokWhitespace Space; TokSpecOp ARROWFUNC; TokLit (Int -1); TokWhitespace Space; TokSpecOp EQUALS; TokWhitespace Space; TokLit (Int 0)]
-   Expect.equal (tokeniser "1 ->-1 = 0") expected "Tokenise as arrow followed by negative integer"
-
-[<Tests>]   
-let allTestsWithExpecto() =
-   runTestsInAssembly defaultConfig [||]
+let lexerTestsWithExpecto() =
+    runTests defaultConfig lexerTestListWithExpecto |> ignore
