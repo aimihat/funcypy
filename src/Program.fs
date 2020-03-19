@@ -18,7 +18,7 @@ let main argv =
     // Running tests - development
     endToEndTestsWithExpecto() |> ignore
     parserTestsWithExpecto() |> ignore
-
+        
     // Running file - release
     (*
     let BuiltInCode = loadCode "src/mainlib/builtin.fpy"
