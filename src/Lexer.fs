@@ -2,7 +2,7 @@ module Lexer
 open Helpers
 
 let intChars = ['0' .. '9']
-let alphaNumeric = ['a' .. 'z'] @ ['A' .. 'Z'] @ intChars
+let alphaNumeric = ['a' .. 'z'] @ ['A' .. 'Z'] @ intChars @ ['_']
 let boolMap = Map ["true",true;"false",false]
 let mathMap = Map ["+", Arithm Add; "-", Arithm Subtract;"*", Arithm Multiply;"/", Arithm Divide;"==",Comp Eq;"!=",Comp Ne;"<",Comp Lt;">",Comp Gt;"<=",Comp Le;">=",Comp Ge]
 let spaceMap = Map ["\n",LineFeed]
@@ -76,30 +76,31 @@ let tokeniser (str: string) =
     let rec tokenise (tokLst,otherLst) =
         let rec dashID (toks,others) = //must figure out if '-' is negative sign, NEGATE or SUBTRACT
             match others with
-            | hd::tl when hd = '>' -> (toks @ [TokSpecOp (ARROWFUNC)],tl) // ->
+            | hd::tl when hd = '>' -> (toks @ [TokSpecOp (ARROWFUNC)],tl) // ->: ARROWFUNC
+            | hd::tl when hd = ' ' -> dashID (toks,tl) //ignore all spaces (except ARROWFUNC)
             | hd::tl when List.exists (fun el -> el = hd) intChars ->
-                match tokLst |> List.rev |> List.head with // #-#
-                | TokLit (Int _) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
-                | TokLit (Double _) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
-                | _ -> buildNum (toks,others,false)
-            | hd::tl when hd = ' ' -> dashID (toks,tl)
-            | hd::tl when inMap mathMap (string hd) -> // - +
-                match tokLst |> List.rev |> List.head with // #-#
-                | TokLit (Int _) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
-                | TokLit (Double _) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
-                | _ -> buildNum (toks,others,false)
-            | hd1::hd2::tl when List.exists (fun el -> el = charstring [hd1;hd2]) (keys mathMap) -> // - ==
-                match tokLst |> List.rev |> List.head with // #-#
-                | TokLit (Int _) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
-                | TokLit (Double _) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
-                | _ -> buildNum (toks,others,false)
-            | [] -> //reached end of string
-                match tokLst |> List.rev |> skipSpaceToks |> List.head with // # -
-                | TokLit (Int _) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
-                | TokLit (Double _) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
-                | TokBuiltInOp _ -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
-                | _ -> (toks @ [TokUnaryOp (NEGATE)],others)
-            | _ -> (toks @ [TokUnaryOp (NEGATE)],others)
+                if tokLst <> [] then
+                    match tokLst |> List.rev |> List.head with //check last token
+                    | TokLit (Int _) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
+                    | TokLit (Double _) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others) //#-#: SUBTRACT
+                    | TokIdentifier _ -> (toks @ [TokBuiltInOp (Arithm Subtract)],others) //x-#: SUBTRACT
+                    | _ -> buildNum (toks,others,false) //-#: negative #
+                else buildNum (toks,others,false)
+            | hd::tl when List.exists (fun el -> el = hd) alphaNumeric ->
+                if tokLst <> [] then
+                    match tokLst |> List.rev |> List.head with //check last token
+                    | TokLit (Int _) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
+                    | TokLit (Double _) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others) //#-x: SUBTRACT
+                    | TokIdentifier _ -> (toks @ [TokBuiltInOp (Arithm Subtract)],others) //x-x: SUBTRACT
+                    | _ -> (toks @ [TokUnaryOp (NEGATE)],others) //-x: negated variable - NEGATE
+                else (toks @ [TokUnaryOp (NEGATE)],others)
+            //the numbers are taken care of in the intChars match above, so this would only match for alphabets (identifiers or non-arithmetic operators): NEGATE
+            | hd::tl when List.exists (fun el -> el = string hd) (keys mathMap) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others) // --#: part of math expression - SUBTRACT
+            | hd::tl when List.exists (fun el -> el = string hd) (keys opMap) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others) // -(exp): part of math expression - SUBTRACT
+            | [] -> (toks @ [TokBuiltInOp (Arithm Subtract)],[])
+            //reached end of list: just send to SUBTRACT, the parse will fail in any way it's interpreted anyway
+            //∵ for all cases ARROWFUNC, NEGATE, SUBTRACT and a negative #, a dash is meaningless if nothing comes after it
+            | _ -> (toks @ [TokUnaryOp (NEGATE)],others) //for all other cases: NEGATE
         match otherLst with
         | hd::tl when hd = ' ' -> tokenise (tokLst,tl)
         | hd::tl when hd = '\t' -> tokenise (tokLst,tl)
