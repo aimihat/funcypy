@@ -18,6 +18,7 @@ and ComparisonType = | Eq | Ne | Lt| Gt | Le | Ge
 and ListFunctionType =
     | IsList
     | IsEmpty
+    | Append
     | Head
     | Tail
     | ImplodeStr

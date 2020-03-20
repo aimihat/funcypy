@@ -106,12 +106,19 @@ let rec Eval (tree: Ast): Ast =
             | _ -> failwithf "Tried calling if statement with condition: %A" cond' 
             |> Some
         | _ -> None
-    
+    List.concat
     // Built-in functions on lists
     let (|BuiltinListFuncs|_|) node =
         match node with
         | Call(Call(BuiltInFunc(ListF P), a, _), b, _) -> // Pair
             NPair(a, NPair(b, Null)) |> Some // I'm aware this is not the same type as on website
+        | Call(Call(BuiltInFunc(ListF Append), list1, _), el, _) -> // List append
+            let rec appendToList lst =
+                match lst with
+                | Pair(e1, Null, _) -> NPair(e1, NPair(el, Null)) 
+                | Pair(e1, e2, _) -> NPair(e1, appendToList e2)
+                | _ -> failwithf "Tried calling Append on %A" list1
+            appendToList list1 |> Some
         | Call(BuiltInFunc(ListF IsEmpty), lst, _) -> // IsEmpty
             match Eval lst with
             | Pair(Null, Null, _) -> true
