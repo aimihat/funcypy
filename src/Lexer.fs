@@ -22,18 +22,6 @@ let rec charstring (clst: char list) =
 let inMap map el =
     keys map |> List.exists (fun x -> x = el)
 
-let rec skipSpaces lst =
-    match lst with
-    | hd::tl when hd = ' ' -> skipSpaces tl
-    | newlst -> newlst
-
-let rec skipSpaceToks lst =
-    match lst with
-    | hd::tl when hd = TokWhitespace Space -> skipSpaceToks tl
-    | newlst -> newlst
-
-let printPipe x = printfn "%A" x; x
-
 let tokeniser (str: string) =
     //buildNum: given that the first char is a number, build either int or float
     let buildNum (tokLst,otherLst,positive) =
@@ -86,6 +74,14 @@ let tokeniser (str: string) =
                     | TokIdentifier _ -> (toks @ [TokBuiltInOp (Arithm Subtract)],others) //x-#: SUBTRACT
                     | _ -> buildNum (toks,others,false) //-#: negative #
                 else buildNum (toks,others,false)
+            | hd1::hd2::tl when hd1 = '.' && List.exists (fun el -> el = hd2) intChars -> //same as above, but for decimals
+                if tokLst <> [] then
+                    match tokLst |> List.rev |> List.head with
+                    | TokLit (Int _) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
+                    | TokLit (Double _) -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
+                    | TokIdentifier _ -> (toks @ [TokBuiltInOp (Arithm Subtract)],others)
+                    | _ -> buildNum (toks,['0'] @ others,false)
+                else buildNum (toks,['0'] @ others,false)
             | hd::tl when List.exists (fun el -> el = hd) alphaNumeric ->
                 if tokLst <> [] then
                     match tokLst |> List.rev |> List.head with //check last token
@@ -106,14 +102,15 @@ let tokeniser (str: string) =
         | hd::tl when hd = '\t' -> tokenise (tokLst,tl)
         | hd::tl when hd = '\v' -> tokenise (tokLst,tl)
         | hd::tl when hd = '\r' -> tokenise (tokLst,tl)
-        | hd::tl when hd = '\f' -> tokenise (tokLst,tl)
-        | hd::tl when hd = '-' -> tokenise (dashID (tokLst,tl))
-        | hd::tl when hd = '\"' -> tokenise (buildString (tokLst,tl))
+        | hd::tl when hd = '\f' -> tokenise (tokLst,tl) // all whitespaces which should be ignored
+        | hd::tl when hd = '-' -> tokenise (dashID (tokLst,tl)) // a '-' is found: identify ARROWFUNC, NEGATE, SUBTRACT or negative integer
+        | hd::tl when hd = '\"' -> tokenise (buildString (tokLst,tl)) // a string is found
         | hd::tl when List.exists (fun el -> el = hd) intChars -> tokenise (buildNum (tokLst,otherLst,true))
+        | hd1::hd2::tl when hd1 = '.' && List.exists (fun el -> el = hd2) intChars -> tokenise (buildNum (tokLst,['0'] @ otherLst,true)) //a decimal is found
         | hd::tl when List.exists (fun el -> el = string hd) (keys mathMap) -> tokenise (tokLst @ [TokBuiltInOp mathMap.[string hd]],tl)
         | hd1::hd2::tl when List.exists (fun el -> el = charstring [hd1;hd2]) (keys mathMap) -> tokenise (tokLst @ [TokBuiltInOp mathMap.[charstring [hd1;hd2]]],tl)
         | hd::tl when List.exists (fun el -> el = string hd) (keys opMap) -> tokenise (tokLst @ [TokSpecOp opMap.[string hd]],tl)
-        //hd1::hd2 isn't needed for opMap since ARROWFUNC is taken care of by dashID, also hd1::hd2 might processes IF and IN, which we don't want
+        //hd1::hd2 isn't needed for opMap since ARROWFUNC is taken care of by dashID, also hd1::hd2 might processes IF which we don't want
         | hd::tl when List.exists (fun el -> el = string hd) (keys spaceMap) -> tokenise (tokLst @ [TokWhitespace spaceMap.[string hd]],tl)
         | hd::tl ->
             match extractWord ([],otherLst) with //true, false, IF, LET, THEN, ELSE, IN, and LAMBDA only works when there is a space before and after
