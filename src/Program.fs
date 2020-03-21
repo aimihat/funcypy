@@ -29,24 +29,11 @@ let main argv =
                     failwithf "Failed Parse: Not all tokens parsed. Check bracket pairs."    
             | None -> failwithf "Failed Parse: Check bracket pairs and Function Definitions"
 
-    // Uneven number of brackets around value 1
-    // printfn "%A" <| pRun pAst [TokSpecOp LRB ; TokLit (Int 5) ; TokSpecOp RRB ; TokSpecOp RRB] // not throwing exception so whats up
-    
-    // Bad Function Definition without new line
-    // printfn "%A" <| wrapper "def x = 2"
-    
-    // [TokSpecOp DEF; TokIdentifier "x"; TokSpecOp EQUALS; TokLit (Int 2)]
-
     // printfn "%A" <| wrapper "((5)" // -> handled in wrapper
     // printfn "%A" <| tokeniser "" // -> handled in wrapper
     lexerTestsWithExpecto() |> ignore
     parserTestsWithExpecto() |> ignore
     endToEndTestsWithExpecto() |> ignore
-
-    // printfn "%A" <| wrapper "def x 2" // returns null
-    // printfn "%A" <| wrapper "" // returns null
-    // printfn "%A" <| wrapper "(2))" // returns null
-    // printfn "%A" <| wrapper "def x = (2)" // returns null
 
     // Running file - release
     (*
