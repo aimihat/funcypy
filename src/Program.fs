@@ -17,17 +17,6 @@ let inline printChain i =
 [<EntryPoint>]
 let main argv =
     // Running tests - development
-    let wrapper input:string = 
-        let tokeniseResult = tokeniser input
-        let numTokens = tokeniseResult.Length
-        let parseResult = pRun pAst tokeniseResult
-        match parseResult with
-            | Some(tree, index) ->
-                if index = numTokens then 
-                    sprintf "%A" <| Interpret(parseResult)                    
-                else 
-                    failwithf "Failed Parse: Not all tokens parsed. Check bracket pairs."    
-            | None -> failwithf "Failed Parse: Check bracket pairs and Function Definitions"
 
     // printfn "%A" <| pRun pAst (tokeniser "def f x = x \n f 1") // -> handled in wrapper
     // printfn "%A" <| tokeniser "" // -> handled in wrapper
@@ -36,7 +25,7 @@ let main argv =
     endToEndTestsWithExpecto() |> ignore
 
     // printfn "%A" <| Interpret (pRun pAst (tokeniser "def ifFuncTest x = \n if (x<1): true \n else: false \n ifFuncTest 3"))
-    printfn "%A" <| Interpret (pRun pAst (tokeniser "def varDefinitionTest x = \n y=5 \n x+y \n varDefinitionTest 3"))
+    printfn "%A" <| Interpret (Parse (tokeniser "def varDefinitionTest x = \n y=5 \n x+y \n varDefinitionTest 3"))
 
     // Running file - release
     (*
