@@ -38,8 +38,7 @@ let main argv =
     // printfn "%A" <| (tokeniser "def isFunky i = \n if i < 10 \n then true \n else false \n isFunky 5")
     printfn "%A" <| Interpret (pRun pAst (tokeniser "def isFunky i = \n if (i < 10) \n then true \n else false \n isFunky 11"))
 
-
-    printfn "%A" <| Interpret (pRun pAst (tokeniser "def funkyList = [1,2,3] \n funkyList"))
+    printfn "%A" <| (pRun pAst (tokeniser "def funkyList = [2,3,4,5] \n funkyList"))
 
     // Running file - release
     (*
