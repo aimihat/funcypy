@@ -35,6 +35,8 @@ let main argv =
     parserTestsWithExpecto() |> ignore
     endToEndTestsWithExpecto() |> ignore
 
+    printfn "%A" <| Interpret (pRun pAst (tokeniser "def ifFuncTest x = \n if (x<1): true \n else: false \n ifFuncTest 3"))
+
     // Running file - release
     (*
     let BuiltInCode = loadCode "src/mainlib/builtin.fpy"

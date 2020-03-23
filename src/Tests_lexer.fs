@@ -166,6 +166,16 @@ let lexerTestListWithExpecto =
          let expected = [TokUnaryOp NEGATE; TokIdentifier "x"; TokBuiltInOp (Arithm Subtract); TokUnaryOp NEGATE; TokIdentifier "x"]
          Expect.equal (tokeniser "- x - - x") expected "dashID: tokenise negated variable minus negated variable"
       }
+
+      test "Lexer Test 3.16" {
+         let expected = [TokSpecOp IF; TokSpecOp LRB ; TokIdentifier "x"; TokBuiltInOp (Comp Lt) ; TokLit (Int 1) ; TokSpecOp RRB ; TokSpecOp COLON ; TokWhitespace LineFeed ; TokLit (Bool true) ; TokWhitespace LineFeed ; TokSpecOp ELSE ; TokSpecOp COLON ; TokWhitespace LineFeed ; TokLit (Bool false)]
+         Expect.equal (tokeniser "if (x<1): \n true \n else: \n false") expected "if statement with all new lines"
+      }
+
+      test "Lexer Test 3.17" {
+         let expected = [TokSpecOp IF; TokSpecOp LRB ; TokIdentifier "x"; TokBuiltInOp (Comp Lt) ; TokLit (Int 1) ; TokSpecOp RRB ; TokSpecOp COLON ; TokLit (Bool true) ; TokWhitespace LineFeed ; TokSpecOp ELSE ; TokSpecOp COLON ; TokLit (Bool false)]
+         Expect.equal (tokeniser "if (x<1): true \n else: false") expected "if statement with some new lines"
+      }
    ]
 
 let lexerTestsWithExpecto() =

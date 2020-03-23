@@ -291,6 +291,14 @@ let rec pAst: Parser<Ast> =
             return FuncDefExp(name, definition, expr)
         }
     
+    let pVariableDef = 
+        parser {
+            let! (Variable name) = pVariable
+            do! pSkipToken (TokSpecOp EQUALS)
+            let! definition = pAst 
+            return FuncDefExp(name, definition, name)
+        }
+
     let pBracketed =
         parser {
             do! pSkipToken (TokSpecOp LRB)
@@ -400,11 +408,12 @@ let rec pAst: Parser<Ast> =
         parser {
             do! pSkipToken (TokSpecOp IF)
             let! condition = pVariable <|> pConst <|> pBracketed
+            do! pSkipToken (TokSpecOp COLON)
             do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
-            do! pSkipToken (TokSpecOp THEN)
             let! ifTrue = pAst
             do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
             do! pSkipToken (TokSpecOp ELSE)
+            do! pSkipToken (TokSpecOp COLON)
             let! ifFalse = pAst
             return DCall(DCall(DCall(BuiltInFunc IfThenElse, condition), ifTrue), ifFalse)
         }
