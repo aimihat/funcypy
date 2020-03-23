@@ -6,19 +6,14 @@ let alphaNumeric = ['a' .. 'z'] @ ['A' .. 'Z'] @ intChars @ ['_']
 let boolMap = Map ["true",true;"false",false]
 let mathMap = Map ["+", Arithm Add; "-", Arithm Subtract;"*", Arithm Multiply;"/", Arithm Divide;"==",Comp Eq;"!=",Comp Ne;"<",Comp Lt;">",Comp Gt;"<=",Comp Le;">=",Comp Ge]
 let spaceMap = Map ["\n",LineFeed]
-let opMap = Map ["[",LSB;"]",RSB;"(",LRB;",",COMMA;"if",IF;"=",EQUALS;"def",DEF;"then",THEN;"else",ELSE;")",RRB;"lambda",LAMBDA;"->",ARROWFUNC]
+let opMap = Map ["[",LSB;"]",RSB;"(",LRB;",",COMMA;"if",IF;"=",EQUALS;"def",DEF;":",COLON;"else",ELSE;")",RRB;"lambda",LAMBDA;"->",ARROWFUNC]
 let unaryMap = Map ["not",NOT;"-",NEGATE]
+let listFuncMap = Map ["isList" , ListF IsList ; "isEmpty", ListF IsEmpty ; "Head", ListF Head ; "Tail", ListF Tail; "Append", ListF Append]
 
-// and ListFunctionType =
-//     | IsList
-//     | IsEmpty
-//     | Head
-//     | Tail
-//     | ImplodeStr
-//     | ExplodeStr
-//     | P // in Built-in 'required list'
-
-let listFunctions = Map ["isList" , IsList ; "isEmpty", IsEmpty ; "Head", Head ; "Tail", Tail ; "ImplodeStr", ImplodeStr ; "ExplodeStr", ExplodeStr]
+let removeComments (code: string) =
+    code.Split '\n'
+    |> Array.filter (fun line -> not(line.StartsWith "#"))
+    |> String.concat "\n"
 
 let keys map =
     map
@@ -128,8 +123,9 @@ let tokeniser (str: string) =
             | (boolTok,newOtherLst) when inMap boolMap boolTok -> tokenise (tokLst @ [boolMap.[boolTok] |> Bool |> TokLit],newOtherLst)
             | (mathTok,newOtherLst) when inMap mathMap mathTok -> tokenise (tokLst @ [mathMap.[mathTok] |> TokBuiltInOp],newOtherLst)
             | (spaceTok,newOtherLst) when inMap spaceMap spaceTok -> tokenise (tokLst @ [spaceMap.[spaceTok] |> TokWhitespace],newOtherLst)
+            | (listFuncTok,newOtherLst) when inMap listFuncMap listFuncTok -> tokenise (tokLst @ [listFuncMap.[listFuncTok] |> TokBuiltInOp],newOtherLst)
             | (opTok,newOtherLst) when inMap opMap opTok -> tokenise  (tokLst @ [opMap.[opTok] |> TokSpecOp],newOtherLst)
             | ("not",newOtherLst) -> tokenise (tokLst @ [NOT |> TokUnaryOp],newOtherLst) // NEGATE is already processed via dashID function
             | (str,newOtherLst) -> tokenise (tokLst @ [str |> string |> TokIdentifier],newOtherLst)
         | [] -> tokLst
-    tokenise ([],Seq.toList str)
+    tokenise ([],Seq.toList (str |> removeComments))

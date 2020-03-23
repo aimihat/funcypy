@@ -1,4 +1,6 @@
-def tempFtoC Ftemp =
-	def p = Ftemp+32
-	p*4/5.0
-tempFtoC 32
+# def sum l =
+# 	if (isEmpty l):
+# 		0
+# 	else:
+# 		(Head l) + (sum (Tail l))
+concat ([1,2,3]) ([4,5,6])

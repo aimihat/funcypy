@@ -38,8 +38,8 @@ let main argv =
         let CombinedCode =
             try
                 let UserCode = loadCode path
-//                Some <| BuiltInCode + "\n" + UserCode
-                Some <| UserCode    
+                Some <| BuiltInCode + "\n" + UserCode
+//                Some <| UserCode    
             with
             | error -> 
                 printf "File not found\n"
@@ -49,7 +49,7 @@ let main argv =
         match CombinedCode with
         | Some code ->
             printf "%A\n" code
-            let result = code |> tokeniser |> pRun pAst
+            let result = code |> tokeniser
             printf "%A" result 
         | _ -> printf "No code"
 //        let result =
@@ -58,7 +58,6 @@ let main argv =
 //            |> Option.map (pRun pAst)
 //            |> Option.map Interpret
 
-        printf "%A" result
 //        match result with
 //        | Some (Some res) -> printf "%s" <| PrintTree Null
 //        | _ -> printf "Did not find evaluate.\n"

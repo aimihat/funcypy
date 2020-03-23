@@ -192,7 +192,7 @@ type Operator =
     | EQUALS 
     | DEF 
     | LETREC
-    | THEN
+    | COLON
     | ELSE
     | LAMBDA 
     | COMMA

@@ -151,6 +151,7 @@ let rec Eval (tree: Ast): Ast =
         | Call(BuiltInFunc(ListF Tail), lst, _) -> // Tail
             match Eval lst with
             | Pair(_, e, _) when e <> Null -> Some e
+            | Pair(_, Null, _) -> Some <| NPair(Null, Null) 
             | e -> failwithf "Tried calling Tail on: %A" e
         | Call(BuiltInFunc(ListF ImplodeStr), lst, _) -> // ImplodeStr
             let rec Implode p = // better if implemented in the language with list reduction

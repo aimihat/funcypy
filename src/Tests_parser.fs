@@ -3,6 +3,7 @@ module ParserTests
 open Helpers
 open Parser
 open Expecto
+open Lexer
 
 [<Tests>]
 // Sample Unit tests for parseT3 to check functionality
@@ -108,20 +109,36 @@ let parserTestListWithExpecto =
 
         test "Pair parse test 3: Two Pair" {
             let twoPair = [TokSpecOp LSB ; TokLit (Int 5) ; TokSpecOp COMMA ; TokLit (Int 6) ; TokSpecOp RSB]
-            let expected = Some(Pair(Pair(Literal (Int 5), Literal (Int 6),ID 0), Null, ID 0), 5)
+            let expected = Some(Pair(Literal (Int 5), Pair(Literal (Int 6), Null, ID 0), ID 0), 5)
             Expect.equal (pRun pAst twoPair) expected "Parsing inp: [5,6]"
         }
 
         test "Pair parse test 4: Three Pair" {
             let threePair = [TokSpecOp LSB ; TokLit (Int 2) ; TokSpecOp COMMA ; TokLit (Int 3) ; TokSpecOp COMMA ; TokLit (Int 4) ; TokSpecOp RSB]
-            let expected = Some (Pair(Pair(Pair(Literal (Int 2), Literal (Int 3), ID 0), Literal (Int 4), ID 0), Null, ID 0), 7)
+            let expected = Some (Pair(Literal (Int 2), Pair(Literal (Int 3), Pair(Literal (Int 4), Null, ID 0), ID 0), ID 0), 7)
             Expect.equal (pRun pAst threePair) expected "Parsing inp: [2,3,4]"
         }
 
         test "Pair parse test 4: Four Pair" {
             let threePair = [TokSpecOp LSB ; TokLit (Int 2) ; TokSpecOp COMMA ; TokLit (Int 3) ; TokSpecOp COMMA ; TokLit (Int 4) ; TokSpecOp COMMA ; TokLit (Int 5) ;TokSpecOp RSB]
-            let expected = Some (Pair(Pair(Pair(Pair(Literal (Int 2), Literal (Int 3), ID 0), Literal (Int 4), ID 0), Literal (Int 5), ID 0), Null, ID 0), 9)
+            let expected = Some (Pair(Literal (Int 2), Pair(Literal (Int 3),Pair (Literal (Int 4),Pair (Literal (Int 5),Null,ID 0),ID 0),ID 0),ID 0), 9)
             Expect.equal (pRun pAst threePair) expected "Parsing inp: [2,3,4,5]"
+        }
+
+        
+        test "Parser and Lexer Test 1" {
+            let expected = Some(FuncDefExp("funkyListHead",Lambda ("arr",Call (BuiltInFunc (ListF Head),Variable "arr",ID 0)),Call (Variable "funkyListHead",Pair (Null,Null,ID 0),ID 0)), 11)
+            Expect.equal ("def funkyListHead arr = \n Head arr \n funkyListHead []" |> tokeniser |> pRun pAst) expected "def funkyListHead arr = \n Head arr \n funkyListHead []"
+        }
+
+        test "Parser and Lexer Test 2" {
+            let expected = Some(FuncDefExp("funkyListTail",Lambda ("arr",Call (BuiltInFunc (ListF Tail),Variable "arr",ID 0)),Call(Variable "funkyListTail",Pair (Literal (Int 2),Pair (Literal (Int 3),Null,ID 0),ID 0),ID 0)), 14)
+            Expect.equal ("def funkyListTail arr = \n Tail arr \n funkyListTail [2,3]" |> tokeniser |> pRun pAst) expected "def funkyListTail arr = \n Tail arr \n funkyListTail [2,3]"
+        }    
+        
+        test "Parser and Lexer Test 3" {
+            let expected = Some(FuncDefExp("funkyListTail",Lambda ("arr",Call (BuiltInFunc (ListF Tail),Variable "arr",ID 0)),Call(Variable "funkyListTail",Pair(Literal (Int 2),Pair(Literal (Int 3),Pair(Literal (Int 4),Pair (Literal (Int 5),Pair (Literal (Int 6),Null,ID 0),ID 0),ID 0),ID 0),ID 0),ID 0)), 20)
+            Expect.equal ("def funkyListTail arr = \n Tail arr \n funkyListTail [2,3,4,5,6]" |> tokeniser |> pRun pAst) expected "def funkyListTail arr = \n Tail arr \n funkyListTail [2,3,4,5,6]"
         }
     ]
 

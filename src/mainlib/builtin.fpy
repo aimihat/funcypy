@@ -1,12 +1,20 @@
-def concat list1 list2 =
-	if (isempty list2) then
-		list1
-	else
-		concat (append list1 (head list2)) (tail list2)
+# Factorial
+# def factorial x =
+# 	if (x==0):
+# 		1 
+# 	else:
+# 		x*(factorial (x-1))
 
-def map f list =
-	if (isempty list) then
-		[]
-	else
-		concat ([f (head list)]) (map f (tail list))
+# Concatenate two lists
+def concat list1 list2 =
+	if (isempty list2):
+		list1
+	else:
+		concat (Append list1 (head list2)) (tail list2)
+
+# def map f list =
+# 	if (isempty list):
+# 		[]
+# 	else:
+# 		concat ([f (head list)]) (map f (tail list))
 
