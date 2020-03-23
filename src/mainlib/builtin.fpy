@@ -17,3 +17,4 @@ def map f list =
 		[]
 	else:
 		concat ([f (head list)]) (map f (tail list))
+

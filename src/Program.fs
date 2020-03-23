@@ -13,12 +13,17 @@ let inline printChain i =
     printf "%A\n------------------\n" i
     i
 
+let testCase =
+    "def f x = \n \t f (x-1) \n f 3"
+
 [<EntryPoint>]
 let main argv =
+    printf "%A\n" RecursionMemo
+    printf "%A\n" (testCase |> tokeniser |> (pRun pExpr) |> Interpret)
+    printf "%A\n" RecursionMemo
     // Running tests - development
-    endToEndTestsWithExpecto() |> ignore
-    parserTestsWithExpecto() |> ignore
-
+//    endToEndTestsWithExpecto() |> ignore
+//    parserTestsWithExpecto() |> ignore
     // Running file - release
     (*
     let BuiltInCode = loadCode "src/mainlib/builtin.fpy"

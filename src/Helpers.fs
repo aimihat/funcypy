@@ -50,6 +50,8 @@ and StructureID =
     
    
 /////// Memoization ///////
+
+let RecursionMemo = Dictionary<Identifier, Ast>()
     
 
 let mutable IDCount = 0
@@ -131,7 +133,10 @@ module PAPHelpers =
         | Literal x -> Some <| Literal x
         | BuiltInFunc B -> Some <| BuiltInFunc B
         | Combinator C -> Some <| Combinator C
-        | Variable x -> Some <| Variable x
+        | Variable x ->
+            match RecursionMemo.TryGetValue x with
+            | true, result -> Some result
+            | false, _ -> Some <| Variable x
         | _ -> None
         
 

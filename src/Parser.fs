@@ -226,11 +226,11 @@ let combineCalls left right =
     addArgs right left
 
 let combinePairs left right =
-    let rec addArgs args body =
-        match args with
-        | [] -> body
-        | hd::tl -> addArgs tl (DPair(body, hd))
-    addArgs right left
+    let rec addPair l r =
+        match r with
+        | [] -> DPair(l, Null)
+        | hd::tl -> DPair(l, addPair hd tl)
+    addPair left right
 
 /// Top Level AST expression parser that combines everything we've done so far
 /// Can be called with pRun (helper function)
@@ -290,7 +290,7 @@ let rec pExpr: Parser<Ast> =
             let! rightArg = pManyMin1 pNextPair // this would get the entire list of values and remove commas but how do we return them wrapped correctly
             do! pSkipToken (TokSpecOp RSB)
             let list = combinePairs leftArg rightArg
-            return DPair(list, Null)
+            return list
             // return DPair(leftArg, DPair(rightArg, Null))
         }
 

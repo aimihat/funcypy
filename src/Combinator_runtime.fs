@@ -34,7 +34,9 @@ let rec InlineDefs (tree: Ast): Ast =
         | FuncDefExp(_, _, _) -> failwithf "ILD001: Shouldn't happen! (%A)" E
 
     match tree with
-    | FuncDefExp(v, body, expr) -> Substitute v <| InlineDefs body <| InlineDefs expr
+    | FuncDefExp(v, body, expr) ->
+        RecursionMemo.TryAdd(v, body |> InlineDefs |> Abstract) |> ignore
+        Substitute v <| InlineDefs body <| InlineDefs expr
     | Call(e1, e2, _) -> DCall(InlineDefs e1, InlineDefs e2)
     | Pair(e1, e2, _) -> DPair(InlineDefs e1, InlineDefs e2)
     | Lambda(bv, body) -> Lambda(bv, InlineDefs body)
