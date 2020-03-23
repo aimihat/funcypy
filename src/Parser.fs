@@ -387,7 +387,7 @@ let rec pAst: Parser<Ast> =
 
             // Define precedence of basic BuiltInType operators
             let pAllOp = pMultiply <|> pDivide <|> pAdd <|> pSubtract
-            let pSubTerm = pBracketed <|> pVariable <|> pConst
+            let pSubTerm = pBracketed <|> pListFunctionApp <|> pVariable <|> pConst
             let pChainOperatorApp = pChainlMin1 pSubTerm pAllOp
             let pCompOps = pLessThan <|> pLessThanOrEq <|> pGreaterThan <|> pGreaterThanOrEq <|> pEqualTo <|> pNotEqualTo
 

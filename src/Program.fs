@@ -25,8 +25,9 @@ let main argv =
     endToEndTestsWithExpecto() |> ignore
 
     // printfn "%A" <| Interpret (pRun pAst (tokeniser "def ifFuncTest x = \n if (x<1): true \n else: false \n ifFuncTest 3"))
-    printfn "%A" <| Interpret (Parse (tokeniser "def varDefinitionTest x = \n y=5 \n x+y \n varDefinitionTest 3"))
-
+    // printfn "%A" <| Interpret (Parse (tokeniser "def varDefinitionTest x = \n y=5 \n x+y \n varDefinitionTest 3"))
+    printfn "%A" <| Interpret (Parse (tokeniser "def varDefinitionTest x = \n lst = [1,2,3] \n Head lst + x\n varDefinitionTest 3"))
+    printfn "%A" <| Interpret (Parse (tokeniser "def varDefinitionTest x = \n lst = [1,2,3] \n (Head lst) + x\n varDefinitionTest 3"))
     // Running file - release
     (*
     let BuiltInCode = loadCode "src/mainlib/builtin.fpy"
