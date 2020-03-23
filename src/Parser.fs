@@ -291,14 +291,6 @@ let rec pAst: Parser<Ast> =
             return FuncDefExp(name, definition, expr)
         }
     
-    let pVariableDef = 
-        parser {
-            let! (Variable name) = pVariable
-            do! pSkipToken (TokSpecOp EQUALS)
-            let! definition = pAst 
-            return FuncDefExp(name, definition, name)
-        }
-
     let pBracketed =
         parser {
             do! pSkipToken (TokSpecOp LRB)
@@ -414,8 +406,24 @@ let rec pAst: Parser<Ast> =
             do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
             do! pSkipToken (TokSpecOp ELSE)
             do! pSkipToken (TokSpecOp COLON)
+            do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
             let! ifFalse = pAst
             return DCall(DCall(DCall(BuiltInFunc IfThenElse, condition), ifTrue), ifFalse)
         }
     
-    pFuncDefExp <|> pIfThenElse <|> pLambda <|> pCall <|> pOperatorApp <|> pListFunctionApp <|> pBracketed <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst // <|> pFailWithError
+    let pVariableDef = 
+        parser { 
+            do printfn "entered func"
+            let! (Variable name) = pVariable
+            do! pSkipToken (TokSpecOp EQUALS)
+            let! definition = pAst
+            return FuncDefExp(name, definition, Variable name)
+
+            // let! name = pVariable
+            // let (Variable extractName) = name
+            // do! pSkipToken (TokSpecOp EQUALS)
+            // let! definition = pConst <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair //TODO: check if this is correct
+            // return FuncDefExp(extractName, definition, name)
+        }
+    
+    pFuncDefExp <|> pIfThenElse <|> pLambda <|> pVariableDef <|> pCall <|> pOperatorApp <|> pListFunctionApp <|> pBracketed <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst // <|> pFailWithError

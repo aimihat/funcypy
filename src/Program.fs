@@ -35,7 +35,8 @@ let main argv =
     parserTestsWithExpecto() |> ignore
     endToEndTestsWithExpecto() |> ignore
 
-    printfn "%A" <| Interpret (pRun pAst (tokeniser "def ifFuncTest x = \n if (x<1): true \n else: false \n ifFuncTest 3"))
+    // printfn "%A" <| Interpret (pRun pAst (tokeniser "def ifFuncTest x = \n if (x<1): true \n else: false \n ifFuncTest 3"))
+    printfn "%A" <| (pRun pAst (tokeniser "def ifFuncTest x = \n x=1 \n x+3"))
 
     // Running file - release
     (*

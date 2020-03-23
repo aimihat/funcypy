@@ -78,7 +78,13 @@ let endToEndTestListWithExpecto =
         test "End to End Test 13" {
             let expected:Option<Ast> = Some (Literal (Bool true))
             Expect.equal ("def funkyIsEmpty arr = \n isEmpty arr \n funkyIsEmpty []" |> tokeniser |> pRun pAst |> Interpret ) expected "def funkyIsEmpty arr = \n isEmpty arr \n funkyIsEmpty []"
-        }        
+        }
+        
+        // Interpret (pRun pAst (tokeniser "def ifFuncTest x = \n if (x<1): true \n else: false \n ifFuncTest 3"))    
+        test "End to End Test 14" {
+            let expected:Option<Ast> = Some (Literal (Bool false))
+            Expect.equal ("def ifFuncTest x = \n if (x<1): true \n else: false \n ifFuncTest 3" |> tokeniser |> pRun pAst |> Interpret ) expected "def ifFuncTest x = \n if (x<1): true \n else: false \n ifFuncTest 3"
+        }
     ]
 
 // WORKING
