@@ -301,7 +301,7 @@ let rec pAst: Parser<Ast> =
     
     let pCall = 
         parser {
-            let! left = pVariable <|> pBracketed // problem is here because it doesnt get pAst but not sure why
+            let! left = pVariable <|> pBracketed
             let! right = pManyMin1 pAst
             return combineCalls left right
         }
@@ -411,19 +411,19 @@ let rec pAst: Parser<Ast> =
             return DCall(DCall(DCall(BuiltInFunc IfThenElse, condition), ifTrue), ifFalse)
         }
     
+    // def y = 5 \n y
+    // y = 5
     let pVariableDef = 
         parser { 
-            do printfn "entered func"
             let! (Variable name) = pVariable
             do! pSkipToken (TokSpecOp EQUALS)
-            let! definition = pAst
-            return FuncDefExp(name, definition, Variable name)
-
-            // let! name = pVariable
-            // let (Variable extractName) = name
-            // do! pSkipToken (TokSpecOp EQUALS)
-            // let! definition = pConst <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair //TODO: check if this is correct
-            // return FuncDefExp(extractName, definition, name)
+            do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
+            let! definition = pConst <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair //TODO: check if this is correct
+            do! pManyMin1 (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
+            let! expr = pAst 
+            return FuncDefExp(name, definition, expr)
         }
     
-    pFuncDefExp <|> pIfThenElse <|> pLambda <|> pVariableDef <|> pCall <|> pOperatorApp <|> pListFunctionApp <|> pBracketed <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst // <|> pFailWithError
+
+
+    pFuncDefExp <|> pIfThenElse <|> pLambda <|> pCall <|> pVariableDef <|> pOperatorApp <|> pListFunctionApp <|> pBracketed <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst // <|> pFailWithError
