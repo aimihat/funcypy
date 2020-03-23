@@ -8,17 +8,7 @@ let mathMap = Map ["+", Arithm Add; "-", Arithm Subtract;"*", Arithm Multiply;"/
 let spaceMap = Map ["\n",LineFeed]
 let opMap = Map ["[",LSB;"]",RSB;"(",LRB;",",COMMA;"if",IF;"=",EQUALS;"def",DEF;"then",THEN;"else",ELSE;")",RRB;"lambda",LAMBDA;"->",ARROWFUNC]
 let unaryMap = Map ["not",NOT;"-",NEGATE]
-
-// and ListFunctionType =
-//     | IsList
-//     | IsEmpty
-//     | Head
-//     | Tail
-//     | ImplodeStr
-//     | ExplodeStr
-//     | P // in Built-in 'required list'
-
-let listFunctions = Map ["isList" , IsList ; "isEmpty", IsEmpty ; "Head", Head ; "Tail", Tail ; "ImplodeStr", ImplodeStr ; "ExplodeStr", ExplodeStr]
+let listFuncMap = Map ["isList" , ListF IsList ; "isEmpty", ListF IsEmpty ; "Head", ListF Head ; "Tail", ListF Tail]
 
 let keys map =
     map
@@ -128,6 +118,7 @@ let tokeniser (str: string) =
             | (boolTok,newOtherLst) when inMap boolMap boolTok -> tokenise (tokLst @ [boolMap.[boolTok] |> Bool |> TokLit],newOtherLst)
             | (mathTok,newOtherLst) when inMap mathMap mathTok -> tokenise (tokLst @ [mathMap.[mathTok] |> TokBuiltInOp],newOtherLst)
             | (spaceTok,newOtherLst) when inMap spaceMap spaceTok -> tokenise (tokLst @ [spaceMap.[spaceTok] |> TokWhitespace],newOtherLst)
+            | (listFuncTok,newOtherLst) when inMap listFuncMap listFuncTok -> tokenise (tokLst @ [listFuncMap.[listFuncTok] |> TokBuiltInOp],newOtherLst)
             | (opTok,newOtherLst) when inMap opMap opTok -> tokenise  (tokLst @ [opMap.[opTok] |> TokSpecOp],newOtherLst)
             | ("not",newOtherLst) -> tokenise (tokLst @ [NOT |> TokUnaryOp],newOtherLst) // NEGATE is already processed via dashID function
             | (str,newOtherLst) -> tokenise (tokLst @ [str |> string |> TokIdentifier],newOtherLst)

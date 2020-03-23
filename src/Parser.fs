@@ -328,11 +328,10 @@ let rec pAst: Parser<Ast> =
         parser {
             do! pSkipToken (TokSpecOp LSB)
             let! leftArg = pAst
-            let! rightArg = pManyMin1 pNextPair // this would get the entire list of values and remove commas but how do we return them wrapped correctly
+            let! rightArg = pManyMin1 pNextPair
             do! pSkipToken (TokSpecOp RSB)
             let list = combinePairs leftArg rightArg
             return list
-            // return DPair(leftArg, DPair(rightArg, Null))
         }
 
     // parse empty pair
@@ -350,6 +349,23 @@ let rec pAst: Parser<Ast> =
             let! arg = pAst
             do! pSkipToken (TokSpecOp RSB)
             return DPair(arg, Null)
+        }
+
+    let pListFunctionApp = 
+        parser {
+            let pListOp opTok operator =
+                pSkipToken opTok |>> fun c -> BuiltInFunc operator
+            let pIsList = pListOp (TokBuiltInOp (ListF IsList)) (ListF IsList)
+            let pIsEmpty = pListOp (TokBuiltInOp (ListF IsEmpty)) (ListF IsEmpty)
+            let pHead = pListOp (TokBuiltInOp (ListF Head)) (ListF Head)
+            let pTail = pListOp (TokBuiltInOp (ListF Tail)) (ListF Tail)
+            let pAllListFuncs = pIsList <|> pIsEmpty <|> pHead <|> pTail
+        
+            let! listOperator = pAllListFuncs  
+            // do printfn "tried to parse listOperator: %A" listOperator
+            let! listTerm = pVariable <|> pFullPair <|> pHalfPair <|> pEmptyPair
+            // do printfn "tried to parse listTerm: %A" listTerm
+            return DCall((listOperator), listTerm)
         }
 
     let pOperatorApp =
@@ -393,4 +409,4 @@ let rec pAst: Parser<Ast> =
             return DCall(DCall(DCall(BuiltInFunc IfThenElse, condition), ifTrue), ifFalse)
         }
     
-    pFuncDefExp <|> pIfThenElse <|> pLambda <|> pCall <|> pOperatorApp <|> pBracketed <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst // <|> pFailWithError
+    pFuncDefExp <|> pIfThenElse <|> pLambda <|> pCall <|> pOperatorApp <|> pListFunctionApp <|> pBracketed <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst // <|> pFailWithError
