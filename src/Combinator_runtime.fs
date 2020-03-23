@@ -1,9 +1,20 @@
 module Combinator_runtime
 
+open System.Runtime.Intrinsics.X86
 open Helpers
 open PAPHelpers
 
-// Bracket Abstraction implemented recursively with `Abstract` and `BracketAbstract`
+let rec Substitute2 BV By In =
+    // Graph search, substituting `Variable BV` by `By`
+    match In with
+    | Call(E1, E2, i) -> Call(Substitute2 BV By E1, Substitute2 BV By E2, i)
+    | Pair(E1, E2, i) -> Pair(Substitute2 BV By E1, Substitute2 BV By E2, i)
+    | Lambda(BV2, E) when BV = BV2 -> Lambda(BV2, E) // Overriden scope
+    | Lambda(BV2, E) -> Lambda(BV2, Substitute2 BV By E) // Overriden scope
+    | Variable x when BV = x -> By
+    | E -> E
+
+//// Bracket Abstraction implemented recursively with `Abstract` and `BracketAbstract`
 let rec Abstract (node: Ast): Ast =
     let rec BracketAbstract var expr =
         match expr with
@@ -14,6 +25,7 @@ let rec Abstract (node: Ast): Ast =
         | other -> NCall(Combinator K, other)
 
     match node with
+    | Call(Lambda (bv, body), x, _) -> Substitute2 bv (Abstract x) (Abstract body)
     | Call(e1, e2, _) -> NCall(Abstract e1, Abstract e2)
     | Pair(e1, e2, _) -> NPair(Abstract e1, Abstract e2)
     | Lambda(bv, body) -> BracketAbstract bv <| Abstract body
@@ -35,7 +47,7 @@ let rec InlineDefs (tree: Ast): Ast =
 
     match tree with
     | FuncDefExp(v, body, expr) ->
-        RecursionMemo.TryAdd(v, body |> InlineDefs |> Abstract) |> ignore
+        RecursionMemo.TryAdd(v, body |> InlineDefs) |> ignore
         Substitute v <| InlineDefs body <| InlineDefs expr
     | Call(e1, e2, _) -> DCall(InlineDefs e1, InlineDefs e2)
     | Pair(e1, e2, _) -> DPair(InlineDefs e1, InlineDefs e2)
@@ -171,6 +183,10 @@ let rec Eval (tree: Ast): Ast =
         | BuiltinIfThenElse result
         | BuiltinCombinator result
         | BuiltinListFuncs result -> Eval result
+        | Call(Variable f, x, i) ->
+            match RecursionMemo.TryGetValue f with
+            | true, result -> NCall(result, x) |> Abstract |> Eval
+            | false, _ -> Call(Variable f, x, i)
         | CONSTORVAR result -> result
         | Pair(e1, e2, id) -> EvalIfChanged e1 e2 id Pair
         | Call(e1, e2, id) -> EvalIfChanged e1 e2 id Call
@@ -195,3 +211,4 @@ let Interpret tree =
         |> Eval // Combinator reduction + builtin functions
         |> Some
     | None -> None
+    

@@ -1,11 +1,6 @@
 module Parser
 
-// open Lexer James module
-
-/// Things that may be used by other modules such as Tokeniser and Runtimes
-/// included in Common Module (e.g. AST, Token definitions)
 open Helpers
-
 /////////////////////////////////////////// PARSER ////////////////////////////////////////////
 
 /// Single Case D.U. used as a wrapper to create a type
@@ -76,6 +71,41 @@ let pChainlMin1 (term: Parser<'T>) (sep: Parser<'T -> 'T -> 'T>): Parser<'T> =
         match termfun tok i with
         | None -> None
         | Some(termValue, termI) -> loop termValue termI
+// some experiment 
+// Computations that can be run step by step
+type Eventually<'T> =
+    | Done of 'T
+    | NotYetDone of (unit -> Eventually<'T>)
+
+let rec bind func expr =
+    match expr with
+    | Done value -> func value
+    | NotYetDone work -> NotYetDone (fun () -> bind func (work()))
+
+// Return the final value wrapped in the Eventually type.
+let result value = Done value
+
+type OkOrException<'T> =
+    | Ok of 'T
+    | Exception of System.Exception
+
+// The catch for the computations. Stitch try/with throughout
+// the computation, and return the overall result as an OkOrException.
+let rec catch expr =
+    match expr with
+    | Done value -> result (Ok value)
+    | NotYetDone work ->
+        NotYetDone (fun () ->
+            let res = try Ok(work()) with | exn -> Exception exn
+            match res with
+            | Ok cont -> catch cont // note, a tailcall
+            | Exception exn -> result (Exception exn))
+
+// The tryWith operator.
+// This is boilerplate in terms of "result", "catch", and "bind".
+let tryWith exn handler =
+    catch exn
+    |> bind (function Ok value -> result value | Exception exn -> handler exn)
 
 /// F# Computation expression: makes it easier to build more complex parsers
 /// Standard FP pattern using earlier defined building block functions
@@ -152,6 +182,9 @@ let pAnd (P uParser) (P tParser) =
         | Some(tvalue, tpos) -> uParser tvalue tpos
         | _ -> None
 
+let pError aParser:Parser<Ast> =
+    failwithf "%A" aParser
+
 /// Define combinators: using static member to attach methods specifically to Parser type
 /// *member* keyword shows that this is a member function (i.e. a method)
 /// After this we can express parsers using combinators to make things even more readable!
@@ -178,7 +211,13 @@ let pSkipToken tok =
         let! token = pToken
         if tok = token then return () else return! pFail()
     }
-    
+
+let pSkipTokenOrFail tok = 
+    parser {
+        let! token = pToken
+        if tok = token then return () else return! failwithf "missing %A" tok 
+    }
+
 /// Get AST Type from BuiltIn Operator, Literal (Const), Identifier (Var), Special Operators
 let pBuiltInFunc = pSatisfy isBuiltInOp |>> fun tok ->
     match tok with
@@ -225,6 +264,9 @@ let combineCalls left right =
         | hd::tl -> addArgs tl (DCall(body, hd))
     addArgs right left
 
+// [1,2] -> left = 1, right=2
+// addArgs args = 2, body = 1
+// 
 let combinePairs left right =
     let rec addPair l r =
         match r with
@@ -234,17 +276,17 @@ let combinePairs left right =
 
 /// Top Level AST expression parser that combines everything we've done so far
 /// Can be called with pRun (helper function)
-let rec pExpr: Parser<Ast> =
+let rec pAst: Parser<Ast> =
     let pFuncDefExp =
         parser {
             do! pSkipToken (TokSpecOp DEF)
             let! (Variable name) = pVariable
             let! arguments = pMany pVariable
-            do! pSkipToken (TokSpecOp EQUALS)
+            do! pSkipTokenOrFail (TokSpecOp EQUALS)
             do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
-            let! body = pExpr
+            let! body = pAst
             do! pManyMin1 (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
-            let! expr = pExpr 
+            let! expr = pAst 
             let definition = combineLambdas arguments body
             return FuncDefExp(name, definition, expr)
         }
@@ -252,41 +294,40 @@ let rec pExpr: Parser<Ast> =
     let pBracketed =
         parser {
             do! pSkipToken (TokSpecOp LRB)
-            let! e = pExpr
-            do! pSkipToken (TokSpecOp RRB)
+            let! e = pAst
+            do! pSkipTokenOrFail (TokSpecOp RRB)
             return e
         }
     
     let pCall = 
         parser {
-            let! left = pVariable <|> pBracketed // problem is here because it doesnt get pExpr but not sure why
-            let! right = pManyMin1 pExpr
+            let! left = pVariable <|> pBracketed // problem is here because it doesnt get pAst but not sure why
+            let! right = pManyMin1 pAst
             return combineCalls left right
         }
 
-
+    // should we be doing the same combine lambda stuff as in function definitions inside the lambdas as well?
     let pLambda =
         parser {
             do! pSkipToken (TokSpecOp LAMBDA)
             let! (Variable id) = pVariable
-            do! pSkipToken (TokSpecOp ARROWFUNC)
-            let! body = pExpr
+            do! pSkipTokenOrFail (TokSpecOp ARROWFUNC)
+            let! body = pAst
             return Lambda(id, body)
         }
 
     let pNextPair = 
         parser {
             do! pSkipToken (TokSpecOp COMMA) 
-            let! nextTerm = pExpr
+            let! nextTerm = pAst
             return nextTerm
         }
 
-    // Pair[Pair[Pair[a, b], c],Null] Pair[null, null], Pair[a, null] 
     // parse full pair
     let pFullPair =
         parser {
             do! pSkipToken (TokSpecOp LSB)
-            let! leftArg = pExpr
+            let! leftArg = pAst
             let! rightArg = pManyMin1 pNextPair // this would get the entire list of values and remove commas but how do we return them wrapped correctly
             do! pSkipToken (TokSpecOp RSB)
             let list = combinePairs leftArg rightArg
@@ -302,11 +343,11 @@ let rec pExpr: Parser<Ast> =
             return DPair(Null, Null)
         }
 
-    // parse empty pair
+    // parse single pair
     let pHalfPair =
         parser {
             do! pSkipToken (TokSpecOp LSB)
-            let! arg = pExpr
+            let! arg = pAst
             do! pSkipToken (TokSpecOp RSB)
             return DPair(arg, Null)
         }
@@ -343,12 +384,13 @@ let rec pExpr: Parser<Ast> =
         parser {
             do! pSkipToken (TokSpecOp IF)
             let! condition = pVariable <|> pConst <|> pBracketed
-            do! pSkipToken (TokSpecOp THEN) 
-            let! ifTrue = pExpr
+            do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
+            do! pSkipToken (TokSpecOp THEN)
+            let! ifTrue = pAst
+            do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
             do! pSkipToken (TokSpecOp ELSE)
-            let! ifFalse = pExpr
+            let! ifFalse = pAst
             return DCall(DCall(DCall(BuiltInFunc IfThenElse, condition), ifTrue), ifFalse)
         }
     
-    // even if you remove call from here it still doesnt work
-    pFuncDefExp <|> pIfThenElse <|> pLambda <|> pCall <|> pOperatorApp <|> pBracketed <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst
+    pFuncDefExp <|> pIfThenElse <|> pLambda <|> pCall <|> pOperatorApp <|> pBracketed <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst // <|> pFailWithError

@@ -1,6 +1,7 @@
 ﻿open Expecto
 open EndToEndTests
 open ParserTests
+open TestsLexer
 open Lexer
 open Parser
 open Combinator_runtime
@@ -14,41 +15,53 @@ let inline printChain i =
     i
 
 let testCase =
-    "def f x = \n \t f (x-1) \n f 3"
+    "def g x =\n2*x\ndef f x =\ng x\nf 2"
+
+let testCase1 =
+    "def factorial x =\n if (x==0) then 1 else (x*(factorial (x-1)))\n factorial 4"
+    
+    
 
 [<EntryPoint>]
 let main argv =
-    printf "%A\n" RecursionMemo
-    printf "%A\n" (testCase |> tokeniser |> (pRun pExpr) |> Interpret)
-    printf "%A\n" RecursionMemo
+//    printf "%A\n" RecursionMemo
+//    printf "%A\n" ("def factorial x =\n if (x==0) then 1 else (x*(factorial (x-1)))\n factorial 4" |> tokeniser |> (pRun pAst) |> Interpret)
+//    printf "%A\n" (testCase1 |> tokeniser |> (pRun pAst) |> Interpret)
+//    printf "%A\n" RecursionMemo
     // Running tests - development
-//    endToEndTestsWithExpecto() |> ignore
-//    parserTestsWithExpecto() |> ignore
+
     // Running file - release
-    (*
+ 
     let BuiltInCode = loadCode "src/mainlib/builtin.fpy"
     match [|"test_code.fpy"|] with 
     | [|path|] -> 
         let CombinedCode =
             try
                 let UserCode = loadCode path
-                Some <| BuiltInCode + "\n" + UserCode
+//                Some <| BuiltInCode + "\n" + UserCode
+                Some <| UserCode    
             with
             | error -> 
                 printf "File not found\n"
                 None
         
         //Append built-in definitions to user code
-        
-        let result =
-            CombinedCode
-            |> Option.map tokeniser
-            |> Option.map (pRun pExpr)
-            |> Option.map Interpret
+        match CombinedCode with
+        | Some code ->
+            printf "%A\n" code
+            let result = code |> tokeniser |> pRun pAst
+            printf "%A" result 
+        | _ -> printf "No code"
+//        let result =
+//            CombinedCode
+//            |> Option.map tokeniser
+//            |> Option.map (pRun pAst)
+//            |> Option.map Interpret
 
-        match result with
-        | Some (Some res) -> printf "%s" <| PrintTree res
-        | _ -> printf "Did not find evaluate.\n"
+        printf "%A" result
+//        match result with
+//        | Some (Some res) -> printf "%s" <| PrintTree Null
+//        | _ -> printf "Did not find evaluate.\n"
     | _ -> printf "Must enter a .fpy file to execute.\n"
-    *)
+    
     0

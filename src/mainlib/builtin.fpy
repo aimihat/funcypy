@@ -1,20 +1,12 @@
-# TODO: PARSE LIST FUNCTIONS!
-# RECURSION AND MUTUAL RECURSION
-# LEXER IGNORE COMMENTS?
-
-
-# List Concatenation
 def concat list1 list2 =
-	if (isempty list2):
+	if (isempty list2) then
 		list1
-	else:
+	else
 		concat (append list1 (head list2)) (tail list2)
 
-
-# Map function
 def map f list =
-	if (isempty list):
+	if (isempty list) then
 		[]
-	else:
+	else
 		concat ([f (head list)]) (map f (tail list))
 
