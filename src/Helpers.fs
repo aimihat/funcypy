@@ -78,7 +78,6 @@ let GetMemoOrAdd IDs f node =
         EvaluationMemo.TryAdd(IDs, result) |> ignore
         result*)
 
-
 let DCall(e1, e2) =
     // Constructs a `Call` with Default ID
     Call(e1, e2, ID 0)
@@ -94,7 +93,6 @@ let NPair(e1, e2) =
 
     
 /////// Helper functions ///////
-    
     
 // Re-used PAP that reduce boilerplate code
 module PAPHelpers = 
@@ -133,7 +131,6 @@ module PAPHelpers =
         | Variable x -> Some <| Variable x
         | _ -> None
         
-
 // F# list -> list from Pair()
 let ListFromPairs (lst: Ast list): Ast =
     let rec compute l =
@@ -144,7 +141,6 @@ let ListFromPairs (lst: Ast list): Ast =
     match lst with
     | [] -> NPair(Null, Null)
     | hd :: tail -> NPair(hd, compute tail)
-    
     
 // Recursively prints an AST tree
 let rec PrintTree (tree: Ast): string = //TODO: review
@@ -173,9 +169,6 @@ let rec PrintTree (tree: Ast): string = //TODO: review
     | Literal(Double x) -> sprintf "%A" <| x
     | Literal(Bool x) -> sprintf "%A" <| x
     | Combinator x -> sprintf "%A" <| x
-
-
-
 
 /////// Parser 
 /// These types may potentially be useful but could be removed; depends on multiple expression

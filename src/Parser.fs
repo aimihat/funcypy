@@ -264,12 +264,15 @@ let combineCalls left right =
         | hd::tl -> addArgs tl (DCall(body, hd))
     addArgs right left
 
+// [1,2] -> left = 1, right=2
+// addArgs args = 2, body = 1
+// 
 let combinePairs left right =
-    let rec addArgs args body =
-        match args with
-        | [] -> body
-        | hd::tl -> addArgs tl (DPair(body, hd))
-    addArgs right left
+    let rec addPair l r =
+        match r with
+        | [] -> DPair(l, Null)
+        | hd::tl -> DPair(l, addPair hd tl)
+    addPair left right
 
 /// Top Level AST expression parser that combines everything we've done so far
 /// Can be called with pRun (helper function)
@@ -303,6 +306,7 @@ let rec pAst: Parser<Ast> =
             return combineCalls left right
         }
 
+    // should we be doing the same combine lambda stuff as in function definitions inside the lambdas as well?
     let pLambda =
         parser {
             do! pSkipToken (TokSpecOp LAMBDA)
@@ -324,10 +328,11 @@ let rec pAst: Parser<Ast> =
         parser {
             do! pSkipToken (TokSpecOp LSB)
             let! leftArg = pAst
-            let! rightArg = pManyMin1 pNextPair
-            do! pSkipTokenOrFail (TokSpecOp RSB)
+            let! rightArg = pManyMin1 pNextPair // this would get the entire list of values and remove commas but how do we return them wrapped correctly
+            do! pSkipToken (TokSpecOp RSB)
             let list = combinePairs leftArg rightArg
-            return DPair(list, Null)
+            return list
+            // return DPair(leftArg, DPair(rightArg, Null))
         }
 
     // parse empty pair
@@ -379,12 +384,13 @@ let rec pAst: Parser<Ast> =
         parser {
             do! pSkipToken (TokSpecOp IF)
             let! condition = pVariable <|> pConst <|> pBracketed
-            do! pSkipTokenOrFail (TokSpecOp THEN)
+            do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
+            do! pSkipToken (TokSpecOp THEN)
             let! ifTrue = pAst
+            do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
             do! pSkipToken (TokSpecOp ELSE)
             let! ifFalse = pAst
             return DCall(DCall(DCall(BuiltInFunc IfThenElse, condition), ifTrue), ifFalse)
         }
     
-    // even if you remove call from here it still doesnt work
     pFuncDefExp <|> pIfThenElse <|> pLambda <|> pCall <|> pOperatorApp <|> pBracketed <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst // <|> pFailWithError

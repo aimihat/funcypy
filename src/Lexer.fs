@@ -9,6 +9,17 @@ let spaceMap = Map ["\n",LineFeed]
 let opMap = Map ["[",LSB;"]",RSB;"(",LRB;",",COMMA;"if",IF;"=",EQUALS;"def",DEF;"then",THEN;"else",ELSE;")",RRB;"lambda",LAMBDA;"->",ARROWFUNC]
 let unaryMap = Map ["not",NOT;"-",NEGATE]
 
+// and ListFunctionType =
+//     | IsList
+//     | IsEmpty
+//     | Head
+//     | Tail
+//     | ImplodeStr
+//     | ExplodeStr
+//     | P // in Built-in 'required list'
+
+let listFunctions = Map ["isList" , IsList ; "isEmpty", IsEmpty ; "Head", Head ; "Tail", Tail ; "ImplodeStr", ImplodeStr ; "ExplodeStr", ExplodeStr]
+
 let keys map =
     map
     |> Map.toList

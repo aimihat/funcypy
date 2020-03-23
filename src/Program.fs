@@ -29,11 +29,17 @@ let main argv =
                     failwithf "Failed Parse: Not all tokens parsed. Check bracket pairs."    
             | None -> failwithf "Failed Parse: Check bracket pairs and Function Definitions"
 
-    // printfn "%A" <| wrapper "((5)" // -> handled in wrapper
+    printfn "%A" <| pRun pAst (tokeniser "def f x = x \n f 1") // -> handled in wrapper
     // printfn "%A" <| tokeniser "" // -> handled in wrapper
     lexerTestsWithExpecto() |> ignore
     parserTestsWithExpecto() |> ignore
     endToEndTestsWithExpecto() |> ignore
+
+    // printfn "%A" <| (tokeniser "def isFunky i = \n if i < 10 \n then true \n else false \n isFunky 5")
+    printfn "%A" <| Interpret (pRun pAst (tokeniser "def isFunky i = \n if (i < 10) \n then true \n else false \n isFunky 11"))
+
+
+    printfn "%A" <| Interpret (pRun pAst (tokeniser "def funkyList = [1,2,3] \n funkyList"))
 
     // Running file - release
     (*
