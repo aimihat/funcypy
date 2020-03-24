@@ -176,6 +176,16 @@ let lexerTestListWithExpecto =
          let expected = [TokSpecOp IF; TokSpecOp LRB ; TokIdentifier "x"; TokBuiltInOp (Comp Lt) ; TokLit (Int 1) ; TokSpecOp RRB ; TokSpecOp COLON ; TokLit (Bool true) ; TokWhitespace LineFeed ; TokSpecOp ELSE ; TokSpecOp COLON ; TokLit (Bool false)]
          Expect.equal (tokeniser "if (x<1): true \n else: false") expected "if statement with some new lines"
       }
+
+      test "Lexer Test with comments" {
+         let expected = [TokSpecOp IF; TokSpecOp LRB ; TokIdentifier "x"; TokBuiltInOp (Comp Lt) ; TokLit (Int 1) ; TokSpecOp RRB ; TokSpecOp COLON ; TokLit (Bool true) ; TokWhitespace LineFeed ; TokSpecOp ELSE ; TokSpecOp COLON ; TokLit (Bool false)]
+         Expect.equal (tokeniser "// comments are awesome \n if (x<1): true \n else: false") expected "if statement with some new lines"
+      }
+
+      test "Lexer Test with comments 2" {
+         let expected = [TokSpecOp IF; TokSpecOp LRB ; TokIdentifier "x"; TokBuiltInOp (Comp Lt) ; TokLit (Int 1) ; TokSpecOp RRB ; TokSpecOp COLON ; TokLit (Bool true) ; TokWhitespace LineFeed ; TokSpecOp ELSE ; TokSpecOp COLON ; TokLit (Bool false)]
+         Expect.equal (tokeniser "// comments are awesome \n if (x<1): true \n else: false // comments are still awesome \n") expected "if statement with some new lines"
+      }
    ]
 
 let lexerTestsWithExpecto() =

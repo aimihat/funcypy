@@ -18,13 +18,15 @@ let inline printChain i =
 let main argv =
     // Running tests - development
 
-    // printfn "%A" <| pRun pAst (tokeniser "def f x = x \n f 1") // -> handled in wrapper
-    // printfn "%A" <| tokeniser "" // -> handled in wrapper
+    
     lexerTestsWithExpecto() |> ignore
     parserTestsWithExpecto() |> ignore
     endToEndTestsWithExpecto() |> ignore
     
     printfn "%A" <| Interpret (pRun pAst (tokeniser "def varDefinitionTest x = \n y=5 \n x+y \n varDefinitionTest 3"))
+    // printfn "%A" <| pRun pAst (tokeniser "def f x = x \n f 1") // -> handled in wrapper
+    // printfn "%A" <| tokeniser "" // -> handled in wrapper
+    
     // Running file - release
     (*
     let BuiltInCode = loadCode "src/mainlib/builtin.fpy"
