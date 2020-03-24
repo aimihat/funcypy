@@ -31,7 +31,6 @@ let main argv =
         parserTestsWithExpecto() |> ignore
         endToEndTestsWithExpecto() |> ignore
         
-        
     // // Running file - release
     // let BuiltInCode = loadCode "src/mainlib/builtin.fpy"
     // match argv with 

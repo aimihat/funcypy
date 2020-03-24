@@ -41,7 +41,7 @@ let rec skipCommentLines lst =
     | [] -> []
 
 let Tokenise (str: string) =
-    //buildNum: given that the first char is a number, build either int or float
+    // buildNum: given that the first char is a number, build either int or float
     let buildNum (tokLst,otherLst,positive) =
         let rec buildInts (acc,lst) =
             match lst with
@@ -82,6 +82,7 @@ let Tokenise (str: string) =
         | Some newTokLst, Ok newOtherLst -> newTokLst,newOtherLst
         | None, Ok newOtherLst -> (tokLst @ [TokLit (String "")],newOtherLst) //This should never occur since newTokLst is at the very least the existing list tokLst
         | _, Error msg -> failwithf "%A" msg
+
     let rec tokenise (tokLst,otherLst) =
         let rec dashID (toks,others) = //must figure out if '-' is negative sign, NEGATE or SUBTRACT
             match others with
@@ -118,6 +119,7 @@ let Tokenise (str: string) =
             //reached end of list: just send to SUBTRACT, the parse will fail in any way it's interpreted anyway
             //∵ for all cases ARROWFUNC, NEGATE, SUBTRACT and a negative #, a dash is meaningless if nothing comes after it
             | _ -> (toks @ [TokUnaryOp (NEGATE)],others) //for all other cases: NEGATE
+        
         match otherLst with
         | hd::tl when hd = ' ' -> tokenise (tokLst,tl)
         | hd::tl when hd = '\t' -> tokenise (tokLst,tl)

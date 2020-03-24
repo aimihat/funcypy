@@ -71,41 +71,6 @@ let pChainlMin1 (term: Parser<'T>) (sep: Parser<'T -> 'T -> 'T>): Parser<'T> =
         match termfun tok i with
         | None -> None
         | Some(termValue, termI) -> loop termValue termI
-// some experiment 
-// Computations that can be run step by step
-type Eventually<'T> =
-    | Done of 'T
-    | NotYetDone of (unit -> Eventually<'T>)
-
-let rec bind func expr =
-    match expr with
-    | Done value -> func value
-    | NotYetDone work -> NotYetDone (fun () -> bind func (work()))
-
-// Return the final value wrapped in the Eventually type.
-let result value = Done value
-
-type OkOrException<'T> =
-    | Ok of 'T
-    | Exception of System.Exception
-
-// The catch for the computations. Stitch try/with throughout
-// the computation, and return the overall result as an OkOrException.
-let rec catch expr =
-    match expr with
-    | Done value -> result (Ok value)
-    | NotYetDone work ->
-        NotYetDone (fun () ->
-            let res = try Ok(work()) with | exn -> Exception exn
-            match res with
-            | Ok cont -> catch cont // note, a tailcall
-            | Exception exn -> result (Exception exn))
-
-// The tryWith operator.
-// This is boilerplate in terms of "result", "catch", and "bind".
-let tryWith exn handler =
-    catch exn
-    |> bind (function Ok value -> result value | Exception exn -> handler exn)
 
 /// F# Computation expression: makes it easier to build more complex parsers
 /// Standard FP pattern using earlier defined building block functions
@@ -126,24 +91,9 @@ let isLiteral (tok: Token) =
     | TokLit _ -> true
     | _ -> false
 
-let isUnaryOp (tok: Token) =
-    match tok with
-    | TokUnaryOp _ -> true
-    | _ -> false
-
-let isOperator (tok: Token) =
-    match tok with
-    | TokSpecOp _ -> true
-    | _ -> false
-
 let isIdentifier (tok: Token) =
     match tok with
     | TokIdentifier _ -> true
-    | _ -> false
-
-let isBuiltInOp (tok: Token) =
-    match tok with
-    | TokBuiltInOp _ -> true
     | _ -> false
 
 /// Parses token and if satisfy evaluates to true then returns token, else returns fail
@@ -199,7 +149,7 @@ let pManyMin1 tparser =
     parser {
         let! head = tparser
         let! tail = pMany tparser
-        return head :: tail 
+        return head::tail
     }
 
 /// Skips a specific token given as input
@@ -209,18 +159,14 @@ let pSkipToken tok =
         if tok = token then return () else return! pFail()
     }
 
+/// Like pSkipToken but fails if the token is missing with specific error message
 let pSkipTokenOrFail tok = 
     parser {
         let! token = pToken
         if tok = token then return () else return! failwithf "missing %A" tok 
     }    
 
-/// Get AST Type from BuiltIn Operator, Literal (Const), Identifier (Var), Special Operators
-let pBuiltInFunc = pSatisfy isBuiltInOp |>> fun tok ->
-    match tok with
-    | TokBuiltInOp op -> op |> BuiltInFunc
-    | _ -> failwith "Expected BuiltInOp but did not receive BuiltInOp"
-
+/// Get AST Type from Literal (Const), Identifier (Var)
 let pConst = pSatisfy isLiteral |>> fun tok ->
     match tok with
     | TokLit(Bool x) -> (Bool x) |> Literal
@@ -233,11 +179,6 @@ let pVariable = pSatisfy isIdentifier |>> fun tok ->
     match tok with
     | TokIdentifier str -> str |> Variable
     | _ -> failwith "Expected Identifier but did not receive Identifier"
-
-let pSpecOp = pSatisfy isOperator |>> fun tok -> 
-        match tok with
-        | TokSpecOp op -> op
-        | _ -> failwith "Expected Operator but did not receive Operator"
 
 let ignoreList =
     let reducer list =
@@ -261,9 +202,6 @@ let combineCalls left right =
         | hd::tl -> addArgs (DCall(l, hd)) tl
     addArgs left right
 
-// [1,2] -> left = 1, right=2
-// addArgs args = 2, body = 1
-// 
 let combinePairs left right =
     let rec addPair l r =
         match r with
@@ -271,11 +209,7 @@ let combinePairs left right =
         | hd::tl -> DPair(l, addPair hd tl)
     addPair left right
 
-let pError aParser:Parser<Ast> =
-    failwithf "%A failed" aParser
-
-/// Top Level AST expression parser that combines everything we've done so far
-/// Can be called with pRun (helper function)
+/// Top Level AST expression parser
 let rec pAst: Parser<Ast> =
     let pFuncDefExp =
         parser {
@@ -307,7 +241,6 @@ let rec pAst: Parser<Ast> =
             return combineCalls left right
         }
 
-    // should we be doing the same combine lambda stuff as in function definitions inside the lambdas as well?
     let pLambda =
         parser {
             do! pSkipToken (TokSpecOp LAMBDA)
@@ -378,7 +311,7 @@ let rec pAst: Parser<Ast> =
 
     let pOperatorApp =
         parser {
-            // pOp Skips the operator and builds an FuncApp AST
+            // pOp Skips the operator and builds an OperatorApp AST (operators applied to 2 arguments)
             let pOp opTok operator =
                 pSkipToken opTok |>> fun c leftTree rightTree -> DCall(DCall((BuiltInFunc operator), leftTree), rightTree)
             let pAdd = pOp (TokBuiltInOp (Arithm Add)) (Arithm Add)
@@ -429,6 +362,7 @@ let rec pAst: Parser<Ast> =
             let! expr = pAst 
             return FuncDefExp(name, definition, expr)
         }
+
     let pCall = 
         parser {
             let! left = pVariable <|> pBracketed
