@@ -8,7 +8,9 @@ let mathMap = Map ["+", Arithm Add; "-", Arithm Subtract;"*", Arithm Multiply;"/
 let spaceMap = Map ["\n",LineFeed]
 let opMap = Map ["[",LSB;"]",RSB;"(",LRB;",",COMMA;"if",IF;"=",EQUALS;"def",DEF;":",COLON;"else",ELSE;")",RRB;"lambda",LAMBDA;"->",ARROWFUNC]
 let unaryMap = Map ["not",NOT;"-",NEGATE]
-let listFuncMap = Map ["IsList" , ListF IsList ; "IsEmpty", ListF IsEmpty ; "Head", ListF Head ; "Tail", ListF Tail; "Append", ListF Append]
+let listFuncMap = Map ["explode", ListF ExplodeStr; "implode", ListF ImplodeStr ; "is_list" , ListF IsList ; "insert", ListF Insert
+                       "is_empty", ListF IsEmpty ; "head", ListF Head ; "tail", ListF Tail; "append", ListF Append]
+
 
 let removeComments (code: string) =
     code.Split '\n'

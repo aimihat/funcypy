@@ -4,13 +4,13 @@ open System.Runtime.Intrinsics.X86
 open Helpers
 open PAPHelpers
 
-let rec Substitute2 BV By In =
+let rec SubstituteL BV By In =
     // Graph search, substituting `Variable BV` by `By`
     match In with
-    | Call(E1, E2, i) -> Call(Substitute2 BV By E1, Substitute2 BV By E2, i)
-    | Pair(E1, E2, i) -> Pair(Substitute2 BV By E1, Substitute2 BV By E2, i)
+    | Call(E1, E2, i) -> Call(SubstituteL BV By E1, SubstituteL BV By E2, i)
+    | Pair(E1, E2, i) -> Pair(SubstituteL BV By E1, SubstituteL BV By E2, i)
     | Lambda(BV2, E) when BV = BV2 -> Lambda(BV2, E) // Overriden scope
-    | Lambda(BV2, E) -> Lambda(BV2, Substitute2 BV By E) // Overriden scope
+    | Lambda(BV2, E) -> Lambda(BV2, SubstituteL BV By E) // Overriden scope
     | Variable x when BV = x -> By
     | E -> E
 
@@ -25,7 +25,10 @@ let rec Abstract (node: Ast): Ast =
         | other -> NCall(Combinator K, other)
 
     match node with
-    | Call(Lambda (bv, body), x, _) -> Substitute2 bv (Abstract x) (Abstract body)
+    | Call(Lambda (bv, body), x, _) -> SubstituteL bv (Abstract x) (Abstract body)
+    | Call(Call(Lambda (bv1, Lambda(bv2, body)), x1, _), x2, _) ->
+        SubstituteL bv1 (Abstract x1) (Abstract body)
+        |> SubstituteL bv2 (Abstract x2)
     | Call(e1, e2, _) -> NCall(Abstract e1, Abstract e2)
     | Pair(e1, e2, _) -> NPair(Abstract e1, Abstract e2)
     | Lambda(bv, body) -> BracketAbstract bv <| Abstract body
@@ -120,7 +123,7 @@ let rec Eval (tree: Ast): Ast =
             | _ -> failwithf "Tried calling if statement with condition: %A" cond' 
             |> Some
         | _ -> None
-    List.concat
+    
     // Built-in functions on lists
     let (|BuiltinListFuncs|_|) node =
         match node with
@@ -128,11 +131,17 @@ let rec Eval (tree: Ast): Ast =
             NPair(a, NPair(b, Null)) |> Some // I'm aware this is not the same type as on website
         | Call(Call(BuiltInFunc(ListF Append), list1, _), el, _) -> // List append
             let rec appendToList lst =
-                match lst with
+                match Eval lst with
+                | Pair(Null, Null, _) -> NPair(el, Null)
                 | Pair(e1, Null, _) -> NPair(e1, NPair(el, Null)) 
                 | Pair(e1, e2, _) -> NPair(e1, appendToList e2)
                 | _ -> failwithf "Tried calling Append on %A" list1
             appendToList list1 |> Some
+        | Call(Call(BuiltInFunc(ListF Insert), list1, _), el, _) -> // List insert
+            match Eval list1 with
+            | Pair(Null, Null, _) -> Some <| NPair(el, Null)
+            | Pair(e1, e2, _) -> Some <| NPair(el, list1)
+            | _ -> failwithf "Tried calling Insert on %A" list1 
         | Call(BuiltInFunc(ListF IsEmpty), lst, _) -> // IsEmpty
             match Eval lst with
             | Pair(Null, Null, _) -> true
@@ -184,6 +193,10 @@ let rec Eval (tree: Ast): Ast =
         | BuiltinIfThenElse result
         | BuiltinCombinator result
         | BuiltinListFuncs result -> Eval result
+        | Call(Call(Variable f, x1, i1), x2, i2) ->
+            match RecursionMemo.TryGetValue f with
+            | true, result -> NCall(NCall(result, x1), x2) |> Abstract |> Eval
+            | false, _ -> Call(Call(Variable f, x1, i1), x2, i2)
         | Call(Variable f, x, i) ->
             match RecursionMemo.TryGetValue f with
             | true, result -> NCall(result, x) |> Abstract |> Eval
@@ -203,13 +216,10 @@ let rec Eval (tree: Ast): Ast =
         Reduce tree
 
 let Interpret tree =
-    match tree with
-    | Some node ->
-        node
-        |> fst
-        |> InlineDefs // Substitutes assignments/definitions where they are used.
-        |> Abstract // Abstracts all functions
-        |> Eval // Combinator reduction + builtin functions
-        |> Some
-    | None -> None
+    tree
+    |> InlineDefs // Substitutes assignments/definitions where they are used.
+    |> Abstract // Abstracts all functions
+    |> Eval // Combinator reduction + builtin functions
+    |> Some
+
     

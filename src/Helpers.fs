@@ -21,6 +21,7 @@ and ListFunctionType =
     | Append
     | Head
     | Tail
+    | Insert
     | ImplodeStr
     | ExplodeStr
     | P // in Built-in 'required list'
@@ -49,10 +50,9 @@ and StructureID =
     | L of Ast // Literal
     
    
-/////// Memoization ///////
+/////// Memoization /////// 
 
 let RecursionMemo = Dictionary<Identifier, Ast>()
-    
 
 let mutable IDCount = 0
 let EvaluationMemo = Dictionary<StructureID*StructureID, Ast>()
@@ -154,6 +154,7 @@ let rec PrintTree (tree: Ast): string = //TODO: review
         sprintf "(%s %s)" <| PrintTree e1 <| PrintTree e2
     | Lambda(bv, exp) ->
         sprintf "(λ%s.%s)" <| bv <| PrintTree exp
+    | Pair(Null, Null, _) -> "[]"  
     | Pair(e1, e2, _) ->
         let rec printList l =
             match l with

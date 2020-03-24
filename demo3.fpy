@@ -1,0 +1,3 @@
+double = lambda x: x*2
+triple = lambda y: y*3
+double (triple 2)

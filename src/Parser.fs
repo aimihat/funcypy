@@ -285,13 +285,12 @@ let rec pAst: Parser<Ast> =
             do! pSkipToken (TokSpecOp DEF)
             let! (Variable name) = pVariable
             let! arguments = pMany pVariable
-            do! pSkipTokenOrFail (TokSpecOp EQUALS)
+            do! pSkipTokenOrFail (TokSpecOp COLON)
             do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
             let! body = pAst
             do! pManyMin1 (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
             let! expr = pAst 
             let definition = combineLambdas arguments body
-            do printf "definition!!! %A --- %A --- %A\n" name definition expr
             return FuncDefExp(name, definition, expr)
         }
     
@@ -302,20 +301,13 @@ let rec pAst: Parser<Ast> =
             do! pSkipTokenOrFail (TokSpecOp RRB)
             return e
         }
-    
-    let pCall = 
-        parser {
-            let! left = pVariable <|> pBracketed
-            let! right = pManyMin1 pAst
-            return combineCalls left right
-        }
 
     // should we be doing the same combine lambda stuff as in function definitions inside the lambdas as well?
     let pLambda =
         parser {
             do! pSkipToken (TokSpecOp LAMBDA)
             let! (Variable id) = pVariable
-            do! pSkipTokenOrFail (TokSpecOp ARROWFUNC)
+            do! pSkipTokenOrFail (TokSpecOp COLON)
             let! body = pAst
             return Lambda(id, body)
         }
@@ -363,23 +355,28 @@ let rec pAst: Parser<Ast> =
             let pIsEmpty = pListOp (TokBuiltInOp (ListF IsEmpty)) (ListF IsEmpty)
             let pHead = pListOp (TokBuiltInOp (ListF Head)) (ListF Head)
             let pTail = pListOp (TokBuiltInOp (ListF Tail)) (ListF Tail)
-            let pAllListFuncs = pIsList <|> pIsEmpty <|> pHead <|> pTail
-
-            let! listOperator = pAllListFuncs  
-            // do printfn "tried to parse listOperator: %A" listOperator
-            let! listTerm = pVariable <|> pFullPair <|> pHalfPair <|> pEmptyPair <|> pBracketed
-            // do printfn "tried to parse listTerm: %A" listTerm
+            let pImplode = pListOp (TokBuiltInOp (ListF ImplodeStr)) (ListF ImplodeStr)
+            let pExplode = pListOp (TokBuiltInOp (ListF ExplodeStr)) (ListF ExplodeStr)
+            
+            let! listOperator = pIsList <|> pIsEmpty <|> pHead <|> pTail <|> pImplode <|> pExplode  
+            let! listTerm = pConst <|> pVariable <|> pFullPair <|> pHalfPair <|> pEmptyPair <|> pBracketed
             return DCall(listOperator, listTerm)
         }
     let pListAppend = 
         parser {
             do! pSkipToken (TokBuiltInOp (ListF Append))
-            do printfn "tried to parse listOperator:" 
-            let! listTerm = pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pBracketed
-            do printfn "tried to parse listTerm: %A" listTerm
-            let! element = pConst <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pBracketed
-//            do printfn "tried to parse listTerm: %A" element
+            let! listTerm = pVariable <|> pFullPair <|> pHalfPair <|> pEmptyPair <|> pBracketed
+            let! element = pConst <|> pVariable <|> pFullPair <|> pHalfPair <|> pEmptyPair <|> pBracketed
+
             return DCall(DCall(BuiltInFunc (ListF Append), listTerm), element)
+        }
+    let pListInsert = 
+        parser {
+            do! pSkipToken (TokBuiltInOp (ListF Insert))
+            let! listTerm = pVariable <|> pFullPair <|> pHalfPair <|> pEmptyPair <|> pBracketed
+            let! element = pConst <|> pVariable <|> pFullPair <|> pHalfPair <|> pEmptyPair <|> pBracketed
+
+            return DCall(DCall(BuiltInFunc (ListF Insert), listTerm), element)
         }
 
     let pOperatorApp =
@@ -424,34 +421,38 @@ let rec pAst: Parser<Ast> =
             let! ifFalse = pAst
             return DCall(DCall(DCall(BuiltInFunc IfThenElse, condition), ifTrue), ifFalse)
         }
-    
+
     let pVariableDef = 
         parser {
             let! (Variable name) = pVariable
+//            printf "Entered %A name" name
             do! pSkipToken (TokSpecOp EQUALS)
-            do printf "here!\n"
+//            printf "Entered %A =" name
             do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
-            let! definition = pConst <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair
+//            printf "Entered %A linefeed" name
+            let! definition = pAst
+//            printf "Entered %A definition"
             do! pManyMin1 (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
+//            printf "Entered %A linefeed2"
             let! expr = pAst
-            do printf "%A --- %A --- %A\n" name definition expr
+//            printf "%A --- %A --- %A\n" name definition expr
             return FuncDefExp(name, definition, expr)
         }
+
     let pCall = 
         parser {
             let! left = pVariable <|> pBracketed
-            let! right = pManyMin1 (pConst <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pBracketed)
+            let! right = pManyMin1 (pConst <|> pVariable <|> pFullPair <|> pHalfPair <|> pEmptyPair <|> pBracketed)
             return combineCalls left right
         }
 
-    (pFuncDefExp <|> pIfThenElse <|> pLambda <|> pCall <|> pVariableDef <|> pOperatorApp <|> pListAppend
-     <|> pListFunctionApp <|> pBracketed <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst)
-    // <|> pFailWithError
+    (pFuncDefExp <|> pIfThenElse <|> pLambda <|> pCall <|> pVariableDef <|> pOperatorApp <|> pListAppend <|> pListInsert
+     <|> pListFunctionApp <|> pBracketed <|> pFullPair <|> pHalfPair <|> pEmptyPair <|> pConst <|> pVariable)
     
 let parseCode =
     parser {
         let! res = pAst
-        do! pManyMin1 (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
+        do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
         return res
     }
     
@@ -461,8 +462,7 @@ let Parse (input:list<Token>) =
     match parseResult with
         | Some(tree, index) ->
             if index = numTokens then 
-                parseResult
+                tree
             else
-                printf "%A %A" index numTokens
                 failwithf "Failed Parse: Not all tokens parsed. Check bracket pairs. %A last parsed" input.[index-1]    
         | None -> failwithf "Failed Parse: Check bracket pairs and Function Definitions"

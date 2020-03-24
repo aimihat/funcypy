@@ -1,20 +1,63 @@
-# Factorial
-def factorial x =
-	if (x==0):
-		1 
+# Size of a list
+def length list:
+	if (is_empty list):
+		0
 	else:
-		x*(factorial (x-1))
+		1 + (length (tail list))
 
-# Concatenate two lists
-# def concat list1 list2 =
-# 	if (isempty list2):
-# 		list1
-# 	else:
-# 		concat (Append list1 (head list2)) (tail list2)
+# Length of a string
+def str_length s:
+	length (explode s)
 
-# def map f list =
-# 	if (isempty list):
-# 		[]
-# 	else:
-# 		concat ([f (head list)]) (map f (tail list))
+# Sums list of numerals
+def sum l:
+	if (is_empty l):
+		0.0
+	else:
+		(head l) + (sum (tail l))
 
+# Averages list of numerals
+def average l:
+	(sum l)/(length l)
+
+# List concatenation
+def concat list1 list2:
+	if (is_empty list2):
+		list1
+	else:
+		concat (append list1 (head list2)) (tail list2)
+
+# String concatenation
+def str_concat s1 s2:
+	l1 = explode s1
+	l2 = explode s2
+	join = concat l1 l2
+	implode join
+
+# Remainder operation (a%b)
+def modulus a b:
+	a-((a/b)*b)
+
+# Reversing a list
+def reverse lst:
+	if (is_empty lst):
+		[]
+	else:
+		append (reverse(tail lst)) (head lst)
+
+# Map list
+def map f list:
+	if (is_empty list):
+		[]
+	else:
+		insert (map f (tail list)) (f (head list))
+
+# Range (numbers from 0 to b)
+def range a b:
+	def create_list lst i:
+		if (i == 0):
+			lst
+		else:
+			j = i-1
+			create_list (insert lst j) (j)
+	map (lambda x: x+a) (create_list [] (b-a))

@@ -34,10 +34,10 @@ let main argv =
     // Running file - release
     let BuiltInCode = loadCode "src/mainlib/builtin.fpy"
     match argv with 
-    | [|path|] -> 
+    | [|path|] ->
+        let UserCode = loadCode path
         let CombinedCode =
             try
-                let UserCode = loadCode path
                 Some <| BuiltInCode + "\n" + UserCode
             with
             | error -> 
@@ -48,7 +48,7 @@ let main argv =
         match CombinedCode with
         | Some code ->
             let CodeNoComments = code |> removeComments
-            printf "\n\"\"\"\n%s\n\"\"\"\n" CodeNoComments
+            printf "\n\"\"\"\n%s\n\"\"\"\n" UserCode
             let result = CodeNoComments |> Tokenise |> Parse |> Interpret
             let prettyOutput = result |> Option.map PrintTree
             match prettyOutput with

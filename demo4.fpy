@@ -1,0 +1,16 @@
+def is_prime n:
+	r = range 2 n
+	if (n > 2):
+		def check_divisible l i:
+			if (is_empty l):
+				true
+			else:
+				if ((modulus i (head l)) == 0):
+					false
+				else:
+					check_divisible (tail l) i
+		check_divisible r n
+	else:
+		false
+
+is_prime 8

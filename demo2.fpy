@@ -1,0 +1,11 @@
+def addToList x:
+	x = append x 10
+	x = append x 20
+	x = append x 30
+	x = append x 40
+	x
+
+average (addToList [])
+
+
+
