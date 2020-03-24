@@ -1,5 +1,7 @@
 module Parser
 
+open Expecto.CSharp
+
 open Helpers
 /////////////////////////////////////////// PARSER ////////////////////////////////////////////
 
@@ -289,6 +291,7 @@ let rec pAst: Parser<Ast> =
             do! pManyMin1 (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
             let! expr = pAst 
             let definition = combineLambdas arguments body
+            do printf "definition!!! %A --- %A --- %A\n" name definition expr
             return FuncDefExp(name, definition, expr)
         }
     
@@ -426,10 +429,12 @@ let rec pAst: Parser<Ast> =
         parser {
             let! (Variable name) = pVariable
             do! pSkipToken (TokSpecOp EQUALS)
+            do printf "here!\n"
             do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
             let! definition = pConst <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair
             do! pManyMin1 (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
-            let! expr = pAst 
+            let! expr = pAst
+            do printf "%A --- %A --- %A\n" name definition expr
             return FuncDefExp(name, definition, expr)
         }
     let pCall = 
@@ -439,15 +444,25 @@ let rec pAst: Parser<Ast> =
             return combineCalls left right
         }
 
-    pFuncDefExp <|> pIfThenElse <|> pLambda <|> pCall <|> pVariableDef <|> pOperatorApp <|> pListAppend <|> pListFunctionApp <|> pBracketed <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst // <|> pFailWithError
+    (pFuncDefExp <|> pIfThenElse <|> pLambda <|> pCall <|> pVariableDef <|> pOperatorApp <|> pListAppend
+     <|> pListFunctionApp <|> pBracketed <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst)
+    // <|> pFailWithError
+    
+let parseCode =
+    parser {
+        let! res = pAst
+        do! pManyMin1 (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
+        return res
+    }
     
 let Parse (input:list<Token>) = 
     let numTokens = input.Length
-    let parseResult = pRun pAst input
+    let parseResult = pRun parseCode input
     match parseResult with
         | Some(tree, index) ->
             if index = numTokens then 
                 parseResult
             else
-                failwithf "Failed Parse: Not all tokens parsed. Check bracket pairs."    
+                printf "%A %A" index numTokens
+                failwithf "Failed Parse: Not all tokens parsed. Check bracket pairs. %A last parsed" input.[index-1]    
         | None -> failwithf "Failed Parse: Check bracket pairs and Function Definitions"
