@@ -7,6 +7,7 @@ open Parser
 open Combinator_runtime
 open Helpers
 open System.IO
+open System
 
 let expectoConfig = { defaultConfig with verbosity = Logging.LogLevel.Debug }
 
@@ -54,4 +55,6 @@ let main argv =
         | _ -> printf "Did not find evaluate.\n"
     | _ -> printf "Must enter a .fpy file to execute.\n"
     *)
+
+    Console.ReadKey() |> ignore
     0
