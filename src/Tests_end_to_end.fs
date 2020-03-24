@@ -57,22 +57,22 @@ let endToEndTestListWithExpecto =
 
         test "End to End Test 10" {
             let expected:Option<Ast> = Some (Literal (Bool true))
-            Expect.equal ("def funkyIsList arr = \n isList arr \n funkyIsList [2,3]" |> Tokenise |> Parse |> Interpret ) expected "def funkyIsList arr = \n isList arr \n funkyIsList [2,3]"
+            Expect.equal ("def funkyIsList arr = \n IsList arr \n funkyIsList [2,3]" |> Tokenise |> Parse |> Interpret ) expected "def funkyIsList arr = \n isList arr \n funkyIsList [2,3]"
         }
 
         test "End to End Test 11" {
             let expected:Option<Ast> = Some (Literal (Bool false))
-            Expect.equal ("def funkyIsList arr = \n isList arr \n funkyIsList \"Tomputer Clarkitechture\"" |> Tokenise |> Parse |> Interpret ) expected "def funkyIsList arr = \n isList arr \n funkyIsList \"Tomputer Clarkitechture\""
+            Expect.equal ("def funkyIsList arr = \n IsList arr \n funkyIsList \"Tomputer Clarkitechture\"" |> Tokenise |> Parse |> Interpret ) expected "def funkyIsList arr = \n isList arr \n funkyIsList \"Tomputer Clarkitechture\""
         }
 
         test "End to End Test 12" {
             let expected:Option<Ast> = Some (Literal (Bool false))
-            Expect.equal ("def funkyIsEmpty arr = \n isEmpty arr \n funkyIsEmpty [2,3]" |> Tokenise |> Parse |> Interpret ) expected "def funkyIsEmpty arr = \n isEmpty arr \n funkyIsEmpty [2,3]"
+            Expect.equal ("def funkyIsEmpty arr = \n IsEmpty arr \n funkyIsEmpty [2,3]" |> Tokenise |> Parse |> Interpret ) expected "def funkyIsEmpty arr = \n isEmpty arr \n funkyIsEmpty [2,3]"
         }
 
         test "End to End Test 13" {
             let expected:Option<Ast> = Some (Literal (Bool true))
-            Expect.equal ("def funkyIsEmpty arr = \n isEmpty arr \n funkyIsEmpty []" |> Tokenise |> Parse |> Interpret ) expected "def funkyIsEmpty arr = \n isEmpty arr \n funkyIsEmpty []"
+            Expect.equal ("def funkyIsEmpty arr = \n IsEmpty arr \n funkyIsEmpty []" |> Tokenise |> Parse |> Interpret ) expected "def funkyIsEmpty arr = \n isEmpty arr \n funkyIsEmpty []"
         }
         
         test "End to End Test 14" {
@@ -173,6 +173,26 @@ let endToEndTestListWithExpecto =
         test "End to End Test 33: Int and Double Multiplication and Subtraction with Brackets" {
             let expected:Option<Ast> = Some (Literal (Double 25.0))
             Expect.equal ("def f x y = (x - 1) * y \n f 11 2.5" |> Tokenise |> Parse |> Interpret ) expected "def f x y = (x - 1) * y \n f 11 2.5"
+        }
+
+        test "End to End Test 34: GE test in if statement" {
+            let expected:Option<Ast> = Some (Literal (Bool true))
+            Expect.equal ("def testGE x = \n if (x >= 5): true \n else: false \n testGE 6" |> Tokenise |> Parse |> Interpret ) expected "def testGE x = \n if (x >= 5): true \n else: false \n testGE 6"
+        }
+
+        test "End to End Test 35: LE test in if statement" {
+            let expected:Option<Ast> = Some (Literal (Bool false))
+            Expect.equal ("def testLE x = \n if (x <= 5): true \n else: false \n testLE 6" |> Tokenise |> Parse |> Interpret ) expected "def testLE x = \n if (x <= 5): true \n else: false \n testLE 6"
+        }
+
+        test "End to End Test 36: LE test in if statement on edge of LE" {
+            let expected:Option<Ast> = Some (Literal (Bool true))
+            Expect.equal ("def testGE x = \n if (x <= 5): true \n else: false \n testGE 5" |> Tokenise |> Parse |> Interpret ) expected "def testGE x = \n if (x <= 5): true \n else: false \n testGE 5"
+        }
+
+        test "End to End Test 37: LT test in if statement" {
+            let expected:Option<Ast> = Some (Literal (Bool true))
+            Expect.equal ("def testGE x = \n if (x>5): true \n else: false \n testGE 6" |> Tokenise |> Parse |> Interpret ) expected "def testGE x = \n if (x>5): true \n else: false \n testGE 6"
         }
     ]
 

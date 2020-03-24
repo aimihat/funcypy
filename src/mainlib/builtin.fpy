@@ -61,3 +61,12 @@ def range a b:
 			j = i-1
 			create_list (insert lst j) (j)
 	map (lambda x: x+a) (create_list [] (b-a))
+
+def range_ b:
+	def create_list lst i:
+		if (i == 0):
+			lst
+		else:
+			j = i-1
+			create_list (insert lst j) (j)
+	create_list [] b

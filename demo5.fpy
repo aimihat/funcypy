@@ -1,0 +1,16 @@
+def fizzbuzz i:
+	if ((modulus i 15) == 0):
+		"fizzbuzz"
+	else:
+		if ((modulus i 3) == 0):
+			"fizz"
+		else:
+			if ((modulus i 5) == 0):
+				"buzz"
+			else:
+				false
+def main n:
+	r = (range_ n)
+	map fizzbuzz r
+
+main 7

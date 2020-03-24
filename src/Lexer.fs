@@ -43,7 +43,7 @@ let rec skipCommentLines lst =
     | [] -> []
 
 let Tokenise (str: string) =
-    //buildNum: given that the first char is a number, build either int or float
+    // buildNum: given that the first char is a number, build either int or float
     let buildNum (tokLst,otherLst,positive) =
         let rec buildInts (acc,lst) =
             match lst with
@@ -60,12 +60,15 @@ let Tokenise (str: string) =
             | ([],tl) -> (tokLst @ [['-'] @ intTok |> charstring |> float |> Double |> TokLit],tl)
             | (decLst,newOtherLst) -> (tokLst @ [['-'] @ intTok @ ['.'] @ decLst |> charstring |> float |> Double |> TokLit],newOtherLst)
         | (intTok,newOtherLst) -> (tokLst @ [['-'] @ intTok |> charstring |> int |> Int |> TokLit],newOtherLst)
+    
     //extractWord: get the next "word", defined by all the characters between two spaces/current space until the end of string
     let rec extractWord (acc,lst) =
         match lst with
         | hd::tl when List.exists (fun el -> el = hd) (alphaNumeric) -> extractWord (acc @ [hd],tl)
-        | hd::tl -> (charstring acc,hd::tl)
+        | hd::tl when not (acc = []) -> (charstring acc,hd::tl)
+        | hd::tl -> failwithf "%A is not a valid token!" hd
         | [] -> (charstring acc,[])
+    
     //buildString: a " has been found, build string until another " is found
     let buildString (tokLst,otherLst) =
         let rec stringChr (acc,lst) =
@@ -81,6 +84,7 @@ let Tokenise (str: string) =
         | Some newTokLst, Ok newOtherLst -> newTokLst,newOtherLst
         | None, Ok newOtherLst -> (tokLst @ [TokLit (String "")],newOtherLst) //This should never occur since newTokLst is at the very least the existing list tokLst
         | _, Error msg -> failwithf "%A" msg
+
     let rec tokenise (tokLst,otherLst) =
         let rec dashID (toks,others) = //must figure out if '-' is negative sign, NEGATE or SUBTRACT
             match others with
@@ -117,6 +121,7 @@ let Tokenise (str: string) =
             //reached end of list: just send to SUBTRACT, the parse will fail in any way it's interpreted anyway
             //∵ for all cases ARROWFUNC, NEGATE, SUBTRACT and a negative #, a dash is meaningless if nothing comes after it
             | _ -> (toks @ [TokUnaryOp (NEGATE)],others) //for all other cases: NEGATE
+        
         match otherLst with
         | hd::tl when hd = ' ' -> tokenise (tokLst,tl)
         | hd::tl when hd = '\t' -> tokenise (tokLst,tl)
@@ -129,8 +134,8 @@ let Tokenise (str: string) =
         | hd1::hd2::tl when charstring [hd1;hd2] = "/*" -> tokenise (tokLst,skipCommentLines tl) //a multi-line comment is found
         | hd::tl when List.exists (fun el -> el = hd) intChars -> tokenise (buildNum (tokLst,otherLst,true))
         | hd1::hd2::tl when hd1 = '.' && List.exists (fun el -> el = hd2) intChars -> tokenise (buildNum (tokLst,['0'] @ otherLst,true)) //a decimal is found
-        | hd::tl when List.exists (fun el -> el = string hd) (keys mathMap) -> tokenise (tokLst @ [TokBuiltInOp mathMap.[string hd]],tl)
         | hd1::hd2::tl when List.exists (fun el -> el = charstring [hd1;hd2]) (keys mathMap) -> tokenise (tokLst @ [TokBuiltInOp mathMap.[charstring [hd1;hd2]]],tl)
+        | hd::tl when List.exists (fun el -> el = string hd) (keys mathMap) -> tokenise (tokLst @ [TokBuiltInOp mathMap.[string hd]],tl)
         | hd::tl when List.exists (fun el -> el = string hd) (keys opMap) -> tokenise (tokLst @ [TokSpecOp opMap.[string hd]],tl)
         //hd1::hd2 isn't needed for opMap since ARROWFUNC is taken care of by dashID, also hd1::hd2 might processes IF which we don't want
         | hd::tl when List.exists (fun el -> el = string hd) (keys spaceMap) -> tokenise (tokLst @ [TokWhitespace spaceMap.[string hd]],tl)
@@ -142,6 +147,6 @@ let Tokenise (str: string) =
             | (listFuncTok,newOtherLst) when inMap listFuncMap listFuncTok -> tokenise (tokLst @ [listFuncMap.[listFuncTok] |> TokBuiltInOp],newOtherLst)
             | (opTok,newOtherLst) when inMap opMap opTok -> tokenise  (tokLst @ [opMap.[opTok] |> TokSpecOp],newOtherLst)
             | ("not",newOtherLst) -> tokenise (tokLst @ [NOT |> TokUnaryOp],newOtherLst) // NEGATE is already processed via dashID function
-            | (str,newOtherLst) -> tokenise (tokLst @ [str |> string |> TokIdentifier],newOtherLst)
+            | (str,newOtherLst) -> tokenise (tokLst @ [str |> TokIdentifier],newOtherLst)
         | [] -> tokLst
     tokenise ([],Seq.toList (str))

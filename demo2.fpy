@@ -8,4 +8,5 @@ def addToList x:
 average (addToList [])
 
 
+# map (lambda x: (x*10)) (range 1 5)
 

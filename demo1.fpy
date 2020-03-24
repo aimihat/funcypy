@@ -5,4 +5,4 @@ def factorial x:
 		x*(factorial (x-1))
 
 x = 3
-3 + (factorial 5)
+x + (factorial 4)
