@@ -32,8 +32,8 @@ We are proposing several possible extensions for our functional language. Which 
 The following is an brief sample of the syntax of FuncyPy.
 
 ```F#
-def tempFtoC Ftemp =
-	def p = Ftemp+32
+def tempFtoC Ftemp:
+	p = Ftemp+32
 	p*4/5.0
 tempFtoC 32
 ```
@@ -54,7 +54,7 @@ tempFtoC 32
 
 **Team deliverable assessment: individual contributions**
 
-1. **Aimilios**: Combinator runtime bug fixes and improvements, system-wide integration, parser-runtime Integration, file-reading, command-line interface (CLI), single argument recursion
+1. **Aimilios**: Runtime improvements, system integration, parser-runtime Integration, CLI, standard lib, basic recursion, demo code
 2. **Yannis**: Parser bug fixes and improvements, parser-lexer Integration, parser-runtime Integration, lexer unit tests, parser tests
 3. **Sergey**: Arithmetic Operators Property-based Tests, Recursion (attempted)
 4. **James**: Lexer bug fixes and improvements, lexer unit tests, Lexer 
