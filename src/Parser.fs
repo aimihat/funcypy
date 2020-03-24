@@ -363,7 +363,7 @@ let rec pAst: Parser<Ast> =
         
             let! listOperator = pAllListFuncs  
             // do printfn "tried to parse listOperator: %A" listOperator
-            let! listTerm = pVariable <|> pFullPair <|> pHalfPair <|> pEmptyPair
+            let! listTerm = pVariable <|> pFullPair <|> pHalfPair <|> pEmptyPair <|> pBracketed
             // do printfn "tried to parse listTerm: %A" listTerm
             return DCall((listOperator), listTerm)
         }
