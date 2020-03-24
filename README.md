@@ -6,7 +6,7 @@ Our team’s deliverable is a functional language called **FuncyPy**. It uses a 
 
 ## Description
 
-The project codebase will be broken down into different modules following the structure below and tracked with Github for version control. To begin with, each team member was assigned a unique module to work on; adjustments could be made later to balance load, if necessary. All major functions will be tested using automated test cases and property-based tests where possible.
+The project codebase is broken down into different modules following the structure below and tracked with Github for version control. All major functions are tested using automated test cases and property-based tests where possible.
 
 - **Helper Module (Common)** | The helper module will include common type definitions and common helper functions that are used across modules, such as functions that convert between types, and printing functions for debugging.
 - **Lexer Module (James)** **|** **Lexer: string -> List Tokens** | The lexer module will tokenize inputs into specific types to be evaluated by the parser into an Abstract Syntax Tree. The Tokens will include token types such as identifiers, keywords, sperators, operators, literals and comments. An extension goal for this module will be to abstain from using any .NET features or types such as the .NET floating-point type which is used by F# so that everything is FABLE compatible and it can port to other languages like JavaScript.
@@ -17,75 +17,46 @@ The project codebase will be broken down into different modules following the st
 
 - **Main Module:** F# Modules cannot contain references to later defined values so including a ‘main module’ at the end of the pipeline will provide a frame to import all other modules and bring everything together.
 
-## **Potential Extensions (order of priority)**
+## Extensions (order of priority)
 
 We are proposing several possible extensions for our functional language. Which ones to pursue will be re-evaluated once further progress has been made with the code. All extensions will be completed in pairs because adding a few working extensions is a priority over adding many just for the sake of it.
 
-- **Pratt parser**: Rewrite the parser to associate semantics with tokens instead of grammar rules to improve the base recursive descent parser. This would allow support for operator precedence, right associativity, using parantheses to override operator precedence and defining operators to be both infix and unary.
 - **Neater syntax:** Further syntax simplification by removing superfluous constructs such as ‘endif’ and adding constructs like ‘elif’.
-- **GUI Module:** A Visual2-like interface would allow for a better demonstration of the language in an easy-to-compile and run environment. An action point here is to ask for access to the VisUAL 2 code so that we can use it as a basis for this extension.
-- **Standard Library:** Built-in functions and modules, implemented in FuncyPy would improve practical utility of the language. This would include functions like F#’s List.map and List.reduce, which could be implemented using lists in the core language syntax.
-- **Python integration:** Enabling support for importing certain python modules directly in our code. These would be evaluated in run-time as python subprocesses (requires matching types, currying would fail). E.g. working interface with matplotlib’s pyplot interface (to plot FuncyPy lists).
+
+- **Standard Library:** Built-in functions and modules, implemented in FuncyPy improve practical utility of the language. This includes functions like list functions such as Head, Tail, and isEmpty.
 
 ## Appendix
 
-### Preliminary Type Definitions (AST)
-
-```F#
-// Incomplete type definition, closures implemention TBD
-
-type Arithmetic = Add | Subtract | Multiply | Divide
-type Comparison = Eq | Ne | Lt | Gt | Le | Ge
-type Identifier = string
- 
-type Value =
-    | Bool of bool
-    | Int of int
-    | Double of double
-    | String of string
-    | Tuple of Value*Value
-    | List of Value*Tuple
- 
-type Ast =    
-    | Statement of Ast    
-    | Expression of Ex    
-    | Function of string option * Argument list option * Ast
-    | Scope of Ast list option
-    | Conditional of Ex * Ast * Ast option
-    | Call of identifier * Argument list option
-    | Assign of identifier * Ex
-and Ex =
-    | Single of Ast
-    | Literal of Value
-    | Variable of Identifier
-    | Arithmetic of Ex * Arithmetic * Ex
-    | Comparison of Ex * Comparison * Ex
-and Argument =
-    | Element of Ex
-```
-
 ### **Syntax Demo for FuncyPy**
 
-The following is an (incomplete) sample of the syntax of FuncyPy.
+The following is an brief sample of the syntax of FuncyPy.
 
 ```F#
-y = 2 // int type	
-a = "test" // string type
-b = True  // boolean type
-d = (True, "test") // Tuple type (e.g. bool, string)
-e = [True, False, False] // list of bool
-f = 2+2 // example arithmetic expression
-
-lambda x: 2 * x // anonymous function definition
-
-def f x y: // Curried function definition
-	if y==2:
-		True
-	elif y==1: // (extension)
-		False
-	else:
-		False
-	endif // (remove as extension)
-
+def tempFtoC Ftemp =
+	def p = Ftemp+32
+	p*4/5.0
+tempFtoC 32
 ```
 
+## Build instructions
+
+**Windows**
+
+...to be added
+
+"To be able to replicate the demo from the repo on a windows machine with a microsoft build, a single setup.bat file that pulls in dependences and allows build"
+
+"If there are multiple deliverables - e.g. Expecto tests under dotnet and team deliverable under FABLE or dotnet - I expect the top-level README to have clear instructions for building and running each one, on a windows platform."
+
+**Mac OSX**
+
+...to be added
+
+**Team deliverable assessment: individual contributions**
+
+1. **Aimilios**: Combinator runtime bug fixes and improvements, system-wide integration, parser-runtime Integration, file-reading, command-line interface (CLI), single argument recursion
+2. **Yannis**: Parser bug fixes and improvements, parser-lexer Integration, parser-runtime Integration, lexer unit tests, parser tests
+3. **Sergey**: Arithmetic Operators Property-based Tests, Recursion (attempted)
+4. **James**: Lexer bug fixes and improvements, lexer unit tests, Lexer 
+
+Please see Individual README statements root of Master branch for more details on individual contributions during group phase.
