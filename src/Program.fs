@@ -24,7 +24,8 @@ let main argv =
     parserTestsWithExpecto() |> ignore
     endToEndTestsWithExpecto() |> ignore
     
-    printfn "%A" <| Interpret (pRun pAst (tokeniser "def varDefinitionTest x = \n y=5 \n x+y \n varDefinitionTest 3"))
+    printfn "%A" <| Interpret (Parse (tokeniser "def f x y = x - y \n f 2 3"))
+    printfn "%A" <| Interpret (Parse (tokeniser "def f arr = Head (Tail arr) \n f [1,2,3]"))
     // printfn "%A" <| pRun pAst (tokeniser "def f x = x \n f 1") // -> handled in wrapper
     // printfn "%A" <| tokeniser "" // -> handled in wrapper
     
