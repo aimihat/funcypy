@@ -255,11 +255,11 @@ let combineLambdas args body =
     addLambda (List.rev args) body
 
 let combineCalls left right =
-    let rec addArgs args body =
-        match args with
-        | [] -> body
-        | hd::tl -> addArgs tl (DCall(body, hd))
-    addArgs right left
+    let rec addArgs l r =
+        match r with
+        | [] -> l
+        | hd::tl -> addArgs (DCall(l, hd)) tl
+    addArgs left right
 
 // [1,2] -> left = 1, right=2
 // addArgs args = 2, body = 1
@@ -279,6 +279,7 @@ let pError aParser:Parser<Ast> =
 let rec pAst: Parser<Ast> =
     let pFuncDefExp =
         parser {
+            do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
             do! pSkipToken (TokSpecOp DEF)
             let! (Variable name) = pVariable
             let! arguments = pMany pVariable
@@ -359,14 +360,23 @@ let rec pAst: Parser<Ast> =
             let pIsEmpty = pListOp (TokBuiltInOp (ListF IsEmpty)) (ListF IsEmpty)
             let pHead = pListOp (TokBuiltInOp (ListF Head)) (ListF Head)
             let pTail = pListOp (TokBuiltInOp (ListF Tail)) (ListF Tail)
-            let pAppend = pListOp (TokBuiltInOp (ListF Append)) (ListF Append)
-            let pAllListFuncs = pIsList <|> pIsEmpty <|> pHead <|> pTail <|> pAppend
+            let pAllListFuncs = pIsList <|> pIsEmpty <|> pHead <|> pTail
 
             let! listOperator = pAllListFuncs  
             // do printfn "tried to parse listOperator: %A" listOperator
             let! listTerm = pVariable <|> pFullPair <|> pHalfPair <|> pEmptyPair <|> pBracketed
             // do printfn "tried to parse listTerm: %A" listTerm
-            return DCall((listOperator), listTerm)
+            return DCall(listOperator, listTerm)
+        }
+    let pListAppend = 
+        parser {
+            do! pSkipToken (TokBuiltInOp (ListF Append))
+            do printfn "tried to parse listOperator:" 
+            let! listTerm = pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pBracketed
+            do printfn "tried to parse listTerm: %A" listTerm
+            let! element = pConst <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pBracketed
+//            do printfn "tried to parse listTerm: %A" element
+            return DCall(DCall(BuiltInFunc (ListF Append), listTerm), element)
         }
 
     let pOperatorApp =
@@ -422,9 +432,15 @@ let rec pAst: Parser<Ast> =
             let! expr = pAst 
             return FuncDefExp(name, definition, expr)
         }
-    
-    pFuncDefExp <|> pIfThenElse <|> pLambda <|> pCall <|> pVariableDef <|> pOperatorApp <|> pListFunctionApp <|> pBracketed <|> pVariable <|> pFullPair <|> pHalfPair <|> pEmptyPair <|> pConst
+    let pCall = 
+        parser {
+            let! left = pVariable <|> pBracketed
+            let! right = pManyMin1 (pConst <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pBracketed)
+            return combineCalls left right
+        }
 
+    pFuncDefExp <|> pIfThenElse <|> pLambda <|> pCall <|> pVariableDef <|> pOperatorApp <|> pListAppend <|> pListFunctionApp <|> pBracketed <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst // <|> pFailWithError
+    
 let Parse (input:list<Token>) = 
     let numTokens = input.Length
     let parseResult = pRun pAst input

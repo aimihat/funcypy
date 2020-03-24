@@ -20,24 +20,20 @@ let testCase =
 let testCase1 =
     "def factorial x =\n if (x==0) then 1 else (x*(factorial (x-1)))\n factorial 4"
     
-    
+let RUN_TESTS = false;
 
 [<EntryPoint>]
 let main argv =
-//    printf "%A\n" RecursionMemo
-//    printf "%A\n" ("def factorial x =\n if (x==0) then 1 else (x*(factorial (x-1)))\n factorial 4" |> tokeniser |> (pRun pAst) |> Interpret)
-//    printf "%A\n" (testCase1 |> tokeniser |> (pRun pAst) |> Interpret)
-//    printf "%A\n" RecursionMemo
     // Running tests - development
-    
-    lexerTestsWithExpecto() |> ignore
-    parserTestsWithExpecto() |> ignore
-    endToEndTestsWithExpecto() |> ignore
-    
+    if RUN_TESTS
+    then
+        lexerTestsWithExpecto() |> ignore
+        parserTestsWithExpecto() |> ignore
+        endToEndTestsWithExpecto() |> ignore
+        
     // Running file - release
- 
     let BuiltInCode = loadCode "src/mainlib/builtin.fpy"
-    match [|"test_code.fpy"|] with 
+    match argv with 
     | [|path|] -> 
         let CombinedCode =
             try
@@ -52,11 +48,11 @@ let main argv =
         match CombinedCode with
         | Some code ->
             let CodeNoComments = code |> removeComments
-            printf "%s\n\n" CodeNoComments
+            printf "\n\"\"\"\n%s\n\"\"\"\n" CodeNoComments
             let result = CodeNoComments |> Tokenise |> Parse |> Interpret
             let prettyOutput = result |> Option.map PrintTree
             match prettyOutput with
-            | Some out -> printf "RESULT:\n%s" out
+            | Some out -> printf "-----------------\n%s\n" out
             | _ -> printf "No output"
         | _ -> printf "No code"
     | _ -> printf "Must enter a .fpy file to execute.\n"
