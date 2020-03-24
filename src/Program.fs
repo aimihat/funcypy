@@ -1,6 +1,7 @@
 ﻿open Expecto
 open EndToEndTests
 open ParserTests
+open TestsLexer
 open Lexer
 open Parser
 open Combinator_runtime
@@ -16,9 +17,16 @@ let inline printChain i =
 [<EntryPoint>]
 let main argv =
     // Running tests - development
-    endToEndTestsWithExpecto() |> ignore
-    parserTestsWithExpecto() |> ignore
 
+    
+    lexerTestsWithExpecto() |> ignore
+    parserTestsWithExpecto() |> ignore
+    endToEndTestsWithExpecto() |> ignore
+    
+    printfn "%A" <| Interpret (pRun pAst (tokeniser "def varDefinitionTest x = \n y=5 \n x+y \n varDefinitionTest 3"))
+    // printfn "%A" <| pRun pAst (tokeniser "def f x = x \n f 1") // -> handled in wrapper
+    // printfn "%A" <| tokeniser "" // -> handled in wrapper
+    
     // Running file - release
     (*
     let BuiltInCode = loadCode "src/mainlib/builtin.fpy"
@@ -38,7 +46,7 @@ let main argv =
         let result =
             CombinedCode
             |> Option.map tokeniser
-            |> Option.map (pRun pExpr)
+            |> Option.map (pRun pAst)
             |> Option.map Interpret
 
         match result with
