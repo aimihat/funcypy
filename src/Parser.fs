@@ -182,9 +182,6 @@ let pAnd (P uParser) (P tParser) =
         | Some(tvalue, tpos) -> uParser tvalue tpos
         | _ -> None
 
-let pError aParser:Parser<Ast> =
-    failwithf "%A" aParser
-
 /// Define combinators: using static member to attach methods specifically to Parser type
 /// *member* keyword shows that this is a member function (i.e. a method)
 /// After this we can express parsers using combinators to make things even more readable!
@@ -216,7 +213,7 @@ let pSkipTokenOrFail tok =
     parser {
         let! token = pToken
         if tok = token then return () else return! failwithf "missing %A" tok 
-    }
+    }    
 
 /// Get AST Type from BuiltIn Operator, Literal (Const), Identifier (Var), Special Operators
 let pBuiltInFunc = pSatisfy isBuiltInOp |>> fun tok ->
@@ -274,6 +271,9 @@ let combinePairs left right =
         | hd::tl -> DPair(l, addPair hd tl)
     addPair left right
 
+let pError aParser:Parser<Ast> =
+    failwithf "%A failed" aParser
+
 /// Top Level AST expression parser that combines everything we've done so far
 /// Can be called with pRun (helper function)
 let rec pAst: Parser<Ast> =
@@ -301,7 +301,7 @@ let rec pAst: Parser<Ast> =
     
     let pCall = 
         parser {
-            let! left = pVariable <|> pBracketed // problem is here because it doesnt get pAst but not sure why
+            let! left = pVariable <|> pBracketed
             let! right = pManyMin1 pAst
             return combineCalls left right
         }
@@ -329,17 +329,9 @@ let rec pAst: Parser<Ast> =
             do! pSkipToken (TokSpecOp LSB)
             let! leftArg = pAst
             let! rightArg = pManyMin1 pNextPair
-            do! pSkipToken (TokSpecOp RSB)
+            do! pSkipTokenOrFail (TokSpecOp RSB)
             let list = combinePairs leftArg rightArg
             return list
-        }
-
-    // parse empty pair
-    let pEmptyPair =
-        parser {
-            do! pSkipToken (TokSpecOp LSB)
-            do! pSkipToken (TokSpecOp RSB)
-            return DPair(Null, Null)
         }
 
     // parse single pair
@@ -347,8 +339,16 @@ let rec pAst: Parser<Ast> =
         parser {
             do! pSkipToken (TokSpecOp LSB)
             let! arg = pAst
-            do! pSkipToken (TokSpecOp RSB)
+            do! pSkipTokenOrFail (TokSpecOp RSB)
             return DPair(arg, Null)
+        }
+
+    // parse empty pair
+    let pEmptyPair =
+        parser {
+            do! pSkipToken (TokSpecOp LSB)
+            do! pSkipTokenOrFail (TokSpecOp RSB)
+            return DPair(Null, Null)
         }
 
     let pListFunctionApp = 
@@ -364,7 +364,7 @@ let rec pAst: Parser<Ast> =
 
             let! listOperator = pAllListFuncs  
             // do printfn "tried to parse listOperator: %A" listOperator
-            let! listTerm = pVariable <|> pFullPair <|> pHalfPair <|> pEmptyPair
+            let! listTerm = pVariable <|> pFullPair <|> pHalfPair <|> pEmptyPair <|> pBracketed
             // do printfn "tried to parse listTerm: %A" listTerm
             return DCall((listOperator), listTerm)
         }
@@ -388,7 +388,7 @@ let rec pAst: Parser<Ast> =
 
             // Define precedence of basic BuiltInType operators
             let pAllOp = pMultiply <|> pDivide <|> pAdd <|> pSubtract
-            let pSubTerm = pBracketed <|> pVariable <|> pConst
+            let pSubTerm = pBracketed <|> pListFunctionApp <|> pVariable <|> pConst
             let pChainOperatorApp = pChainlMin1 pSubTerm pAllOp
             let pCompOps = pLessThan <|> pLessThanOrEq <|> pGreaterThan <|> pGreaterThanOrEq <|> pEqualTo <|> pNotEqualTo
 
@@ -401,15 +401,37 @@ let rec pAst: Parser<Ast> =
         parser {
             do! pSkipToken (TokSpecOp IF)
             let! condition = pVariable <|> pConst <|> pBracketed
-            do! pSkipToken (TokSpecOp COLON)
+            do! pSkipTokenOrFail (TokSpecOp COLON)
             do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
             let! ifTrue = pAst
             do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
-            do! pSkipToken (TokSpecOp ELSE)
-            do! pSkipToken (TokSpecOp COLON)
+            do! pSkipTokenOrFail (TokSpecOp ELSE)
+            do! pSkipTokenOrFail (TokSpecOp COLON)
             do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
             let! ifFalse = pAst
             return DCall(DCall(DCall(BuiltInFunc IfThenElse, condition), ifTrue), ifFalse)
         }
     
-    pFuncDefExp <|> pIfThenElse <|> pLambda <|> pCall <|> pOperatorApp <|> pListFunctionApp <|> pBracketed <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair <|> pConst // <|> pFailWithError
+    let pVariableDef = 
+        parser {
+            let! (Variable name) = pVariable
+            do! pSkipToken (TokSpecOp EQUALS)
+            do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
+            let! definition = pConst <|> pVariable <|> pFullPair <|> pEmptyPair <|> pHalfPair
+            do! pManyMin1 (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
+            let! expr = pAst 
+            return FuncDefExp(name, definition, expr)
+        }
+    
+    pFuncDefExp <|> pIfThenElse <|> pLambda <|> pCall <|> pVariableDef <|> pOperatorApp <|> pListFunctionApp <|> pBracketed <|> pVariable <|> pFullPair <|> pHalfPair <|> pEmptyPair <|> pConst
+
+let Parse (input:list<Token>) = 
+    let numTokens = input.Length
+    let parseResult = pRun pAst input
+    match parseResult with
+        | Some(tree, index) ->
+            if index = numTokens then 
+                parseResult
+            else
+                failwithf "Failed Parse: Not all tokens parsed. Check bracket pairs."    
+        | None -> failwithf "Failed Parse: Check bracket pairs and Function Definitions"

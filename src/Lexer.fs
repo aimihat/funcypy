@@ -28,7 +28,19 @@ let rec charstring (clst: char list) =
 let inMap map el =
     keys map |> List.exists (fun x -> x = el)
 
-let tokeniser (str: string) =
+let rec skipComment lst =
+    match lst with
+    | hd::tl when hd = '\n' -> tl
+    | hd::tl -> skipComment tl
+    | [] -> []
+
+let rec skipCommentLines lst =
+    match lst with
+    | hd1::hd2::tl when charstring [hd1;hd2] = "*/" -> tl
+    | hd::tl -> skipCommentLines tl
+    | [] -> []
+
+let Tokenise (str: string) =
     //buildNum: given that the first char is a number, build either int or float
     let buildNum (tokLst,otherLst,positive) =
         let rec buildInts (acc,lst) =
@@ -111,6 +123,8 @@ let tokeniser (str: string) =
         | hd::tl when hd = '\f' -> tokenise (tokLst,tl) // all whitespaces which should be ignored
         | hd::tl when hd = '-' -> tokenise (dashID (tokLst,tl)) // a '-' is found: identify ARROWFUNC, NEGATE, SUBTRACT or negative integer
         | hd::tl when hd = '\"' -> tokenise (buildString (tokLst,tl)) // a string is found
+        | hd1::hd2::tl when charstring [hd1;hd2] = "//" -> tokenise (tokLst,skipComment tl) //a comment is found
+        | hd1::hd2::tl when charstring [hd1;hd2] = "/*" -> tokenise (tokLst,skipCommentLines tl) //a multi-line comment is found
         | hd::tl when List.exists (fun el -> el = hd) intChars -> tokenise (buildNum (tokLst,otherLst,true))
         | hd1::hd2::tl when hd1 = '.' && List.exists (fun el -> el = hd2) intChars -> tokenise (buildNum (tokLst,['0'] @ otherLst,true)) //a decimal is found
         | hd::tl when List.exists (fun el -> el = string hd) (keys mathMap) -> tokenise (tokLst @ [TokBuiltInOp mathMap.[string hd]],tl)
@@ -128,4 +142,4 @@ let tokeniser (str: string) =
             | ("not",newOtherLst) -> tokenise (tokLst @ [NOT |> TokUnaryOp],newOtherLst) // NEGATE is already processed via dashID function
             | (str,newOtherLst) -> tokenise (tokLst @ [str |> string |> TokIdentifier],newOtherLst)
         | [] -> tokLst
-    tokenise ([],Seq.toList (str |> removeComments))
+    tokenise ([],Seq.toList (str))

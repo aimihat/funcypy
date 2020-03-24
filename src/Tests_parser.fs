@@ -128,17 +128,17 @@ let parserTestListWithExpecto =
         
         test "Parser and Lexer Test 1" {
             let expected = Some(FuncDefExp("funkyListHead",Lambda ("arr",Call (BuiltInFunc (ListF Head),Variable "arr",ID 0)),Call (Variable "funkyListHead",Pair (Null,Null,ID 0),ID 0)), 11)
-            Expect.equal ("def funkyListHead arr = \n Head arr \n funkyListHead []" |> tokeniser |> pRun pAst) expected "def funkyListHead arr = \n Head arr \n funkyListHead []"
+            Expect.equal ("def funkyListHead arr = \n Head arr \n funkyListHead []" |> Tokenise |> pRun pAst) expected "def funkyListHead arr = \n Head arr \n funkyListHead []"
         }
 
         test "Parser and Lexer Test 2" {
             let expected = Some(FuncDefExp("funkyListTail",Lambda ("arr",Call (BuiltInFunc (ListF Tail),Variable "arr",ID 0)),Call(Variable "funkyListTail",Pair (Literal (Int 2),Pair (Literal (Int 3),Null,ID 0),ID 0),ID 0)), 14)
-            Expect.equal ("def funkyListTail arr = \n Tail arr \n funkyListTail [2,3]" |> tokeniser |> pRun pAst) expected "def funkyListTail arr = \n Tail arr \n funkyListTail [2,3]"
+            Expect.equal ("def funkyListTail arr = \n Tail arr \n funkyListTail [2,3]" |> Tokenise |> pRun pAst) expected "def funkyListTail arr = \n Tail arr \n funkyListTail [2,3]"
         }    
         
         test "Parser and Lexer Test 3" {
             let expected = Some(FuncDefExp("funkyListTail",Lambda ("arr",Call (BuiltInFunc (ListF Tail),Variable "arr",ID 0)),Call(Variable "funkyListTail",Pair(Literal (Int 2),Pair(Literal (Int 3),Pair(Literal (Int 4),Pair (Literal (Int 5),Pair (Literal (Int 6),Null,ID 0),ID 0),ID 0),ID 0),ID 0),ID 0)), 20)
-            Expect.equal ("def funkyListTail arr = \n Tail arr \n funkyListTail [2,3,4,5,6]" |> tokeniser |> pRun pAst) expected "def funkyListTail arr = \n Tail arr \n funkyListTail [2,3,4,5,6]"
+            Expect.equal ("def funkyListTail arr = \n Tail arr \n funkyListTail [2,3,4,5,6]" |> Tokenise |> pRun pAst) expected "def funkyListTail arr = \n Tail arr \n funkyListTail [2,3,4,5,6]"
         }
     ]
 

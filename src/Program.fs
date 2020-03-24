@@ -29,7 +29,11 @@ let main argv =
 //    printf "%A\n" (testCase1 |> tokeniser |> (pRun pAst) |> Interpret)
 //    printf "%A\n" RecursionMemo
     // Running tests - development
-
+    
+    lexerTestsWithExpecto() |> ignore
+    parserTestsWithExpecto() |> ignore
+    endToEndTestsWithExpecto() |> ignore
+    
     // Running file - release
  
     let BuiltInCode = loadCode "src/mainlib/builtin.fpy"
@@ -39,7 +43,6 @@ let main argv =
             try
                 let UserCode = loadCode path
                 Some <| BuiltInCode + "\n" + UserCode
-//                Some <| UserCode    
             with
             | error -> 
                 printf "File not found\n"
@@ -48,19 +51,14 @@ let main argv =
         //Append built-in definitions to user code
         match CombinedCode with
         | Some code ->
-            printf "%A\n" code
-            let result = code |> tokeniser
-            printf "%A" result 
+            let CodeNoComments = code |> removeComments
+            printf "%s\n\n" CodeNoComments
+            let result = CodeNoComments |> Tokenise |> Parse |> Interpret
+            let prettyOutput = result |> Option.map PrintTree
+            match prettyOutput with
+            | Some out -> printf "RESULT:\n%s" out
+            | _ -> printf "No output"
         | _ -> printf "No code"
-//        let result =
-//            CombinedCode
-//            |> Option.map tokeniser
-//            |> Option.map (pRun pAst)
-//            |> Option.map Interpret
-
-//        match result with
-//        | Some (Some res) -> printf "%s" <| PrintTree Null
-//        | _ -> printf "Did not find evaluate.\n"
     | _ -> printf "Must enter a .fpy file to execute.\n"
     
     0
