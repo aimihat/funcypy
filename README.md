@@ -17,7 +17,7 @@ The project codebase is broken down into different modules following the structu
 
 - **Main Module:** F# Modules cannot contain references to later defined values so including a ‘main module’ at the end of the pipeline will provide a frame to import all other modules and bring everything together.
 
-## Extensions (order of priority)
+## Extensions
 
 We are proposing several possible extensions for our functional language. Which ones to pursue will be re-evaluated once further progress has been made with the code. All extensions will be completed in pairs because adding a few working extensions is a priority over adding many just for the sake of it.
 
@@ -50,7 +50,7 @@ tempFtoC 32
 
 **Mac OSX**
 
-...to be added
+To run tests in development mode, set RUN_TESTS in Program.fs to true and comment out the release code below. To run release code set RUN_TESTS to false.
 
 **Team deliverable assessment: individual contributions**
 
