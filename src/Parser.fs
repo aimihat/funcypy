@@ -358,17 +358,11 @@ let rec pAst: Parser<Ast> =
     let pVariableDef = 
         parser {
             let! (Variable name) = pVariable
-//            printf "Entered %A name" name
             do! pSkipToken (TokSpecOp EQUALS)
-//            printf "Entered %A =" name
             do! pMany (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
-//            printf "Entered %A linefeed" name
             let! definition = pAst
-//            printf "Entered %A definition"
             do! pManyMin1 (pSkipToken (TokWhitespace LineFeed)) |> ignoreList
-//            printf "Entered %A linefeed2"
             let! expr = pAst
-//            printf "%A --- %A --- %A\n" name definition expr
             return FuncDefExp(name, definition, expr)
         }
 

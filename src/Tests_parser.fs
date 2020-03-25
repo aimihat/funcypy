@@ -10,9 +10,9 @@ open Lexer
 let parserTestListWithExpecto =
     testList "Test Group for Parser with Expecto" [
         test "Parser Test 1" {
-            let tokenInput1 =  [TokSpecOp DEF ; TokIdentifier ("x") ; TokSpecOp EQUALS ; TokWhitespace LineFeed ; TokLit (Int 2) ; TokWhitespace LineFeed ; TokIdentifier ("x")]
+            let tokenInput1 =  [TokSpecOp DEF ; TokIdentifier ("x") ; TokSpecOp COLON ; TokWhitespace LineFeed ; TokLit (Int 2) ; TokWhitespace LineFeed ; TokIdentifier ("x")]
             let expected = Some(FuncDefExp("x", Literal (Int 2), Variable "x"), 7)
-            Expect.equal (pRun pAst tokenInput1) expected "Parsing inp: def x = \n 2 \n x"     
+            Expect.equal (pRun pAst tokenInput1) expected "Parsing inp: def x: \n 2 \n x"     
         }
 
         test "Bad Function Definition without new line" {
@@ -20,14 +20,7 @@ let parserTestListWithExpecto =
             // let expected = None
             Expect.throws (fun _ -> pRun pAst tokenInput |> ignore) "Parsing inp: def x = 2" 
         }
-        
-        // Review what this is supposed to output -> if its an error handled by wrapper in program.fs
-        // test "Bad Function Definition with new line" {
-        //     let tokenInput = [TokSpecOp DEF; TokIdentifier "x"; TokSpecOp EQUALS; TokLit (Int 2)]
-        //     // let expected = failwith "No matches to any AST types"
-        //     Expect.throws (fun _ -> pRun pAst tokenInput |> ignore) "Parsing inp: def x = \n 2" 
-        // }
-        
+                
         test "Bad Function Definition with missing equals" {
             let tokenInput = [TokSpecOp DEF; TokIdentifier "x"; TokLit (Int 2)]
             // let expected = failwith "Missing TokSpecOp EQUALS"
@@ -46,13 +39,6 @@ let parserTestListWithExpecto =
             Expect.throws (fun _ -> pRun pAst tokenInput |> ignore) "Parsing inp: def x \n 2" 
         }
 
-        // Review what this is supposed to output -> if its an error handled by wrapper in program.fs
-        // test "Uneven number of brackets around value 1" {
-        //     let tokenInput = [TokSpecOp LRB ; TokLit (Int 5) ; TokSpecOp RRB ; TokSpecOp RRB]
-        //     // let expected = failwith "better error message needed here"
-        //     Expect.throws (fun _ -> pRun pAst tokenInput |> ignore) "Parsing inp: (5))" 
-        // }
-
         test "Uneven number of brackets around value 2" {
             let tokenInput = [TokSpecOp LRB ; TokSpecOp LRB ; TokLit (Int 5) ;TokSpecOp RRB]
             let expected = None
@@ -60,39 +46,39 @@ let parserTestListWithExpecto =
         }
 
         test "Bad Lambda Definition with new line" {
-            let tokenInput = [TokSpecOp DEF ; TokIdentifier "f" ; TokSpecOp EQUALS ; TokSpecOp LAMBDA ; TokIdentifier "x" ; TokIdentifier "x" ; TokBuiltInOp (Arithm Multiply) ; TokLit (Int 2) ; TokWhitespace LineFeed ; TokIdentifier "f"; TokLit (Int 2)]
+            let tokenInput = [TokSpecOp DEF ; TokIdentifier "f" ; TokSpecOp COLON ; TokSpecOp LAMBDA ; TokIdentifier "x" ; TokIdentifier "x" ; TokBuiltInOp (Arithm Multiply) ; TokLit (Int 2) ; TokWhitespace LineFeed ; TokIdentifier "f"; TokLit (Int 2)]
             // let expected = failwithf "Missing TokSpecOp ARROWFUNC"
             Expect.throws (fun _ -> pRun pAst tokenInput |> ignore) "Parsing inp: Bad Lambda definition" 
         }
  
         test "Simple Nested Function Definition" {
-            let tokenInput = [TokSpecOp DEF; TokIdentifier "f"; TokIdentifier "y"; TokSpecOp EQUALS; TokWhitespace LineFeed; TokSpecOp DEF; TokIdentifier "x"; TokSpecOp EQUALS; TokLit (Int 2); TokWhitespace LineFeed; TokIdentifier "x"; TokBuiltInOp (Arithm Multiply); TokIdentifier "y"; TokWhitespace LineFeed; TokIdentifier "f"; TokLit (Int 2)]
+            let tokenInput = [TokSpecOp DEF; TokIdentifier "f"; TokIdentifier "y"; TokSpecOp COLON; TokWhitespace LineFeed; TokSpecOp DEF; TokIdentifier "x"; TokSpecOp COLON; TokLit (Int 2); TokWhitespace LineFeed; TokIdentifier "x"; TokBuiltInOp (Arithm Multiply); TokIdentifier "y"; TokWhitespace LineFeed; TokIdentifier "f"; TokLit (Int 2)]
             let expected = Some (FuncDefExp("f", Lambda("y", FuncDefExp("x",Literal (Int 2), Call(Call (BuiltInFunc (Arithm Multiply),Variable "x",ID 0), Variable "y",ID 0))),Call (Variable "f",Literal (Int 2),ID 0)), 16)
-            Expect.equal (pRun pAst tokenInput) expected "Parsing inp: def f y = \n def x = 2 \n x * y \n f 2" 
+            Expect.equal (pRun pAst tokenInput) expected "Parsing inp: def f y: \n def x: 2 \n x * y \n f 2" 
         }
         
         test "Function Definition with 2 inputs" {
-            let tokenInput = [TokSpecOp DEF ; TokIdentifier "f" ; TokIdentifier "x" ; TokIdentifier "y" ; TokSpecOp EQUALS; TokLit (Int 2); TokBuiltInOp (Arithm Multiply) ; TokIdentifier "x"; TokWhitespace LineFeed; TokIdentifier "f"; TokLit (Int 2) ; TokLit (Int 3)]
+            let tokenInput = [TokSpecOp DEF ; TokIdentifier "f" ; TokIdentifier "x" ; TokIdentifier "y" ; TokSpecOp COLON; TokLit (Int 2); TokBuiltInOp (Arithm Multiply) ; TokIdentifier "x"; TokWhitespace LineFeed; TokIdentifier "f"; TokLit (Int 2) ; TokLit (Int 3)]
             let expected = Some(FuncDefExp("f",Lambda("x",Lambda("y",Call(Call (BuiltInFunc (Arithm Multiply),Literal (Int 2),ID 0), Variable "x",ID 0))), Call (Call (Variable "f",Literal (Int 2),ID 0),Literal (Int 3),ID 0)), 12)
-            Expect.equal (pRun pAst tokenInput) expected "Parsing inp: def f y = \n def x = 2 \n x * y \n f 2" 
+            Expect.equal (pRun pAst tokenInput) expected "Parsing inp: def f x y: \n def x = 2*x \n f 2 3" 
         }
 
         test "Function Definition Test 1" {
-            let tokenInput = [TokSpecOp DEF ; TokIdentifier "f" ; TokIdentifier "x" ; TokSpecOp EQUALS ; TokWhitespace LineFeed; TokLit (Int 2); TokBuiltInOp (Arithm Multiply) ; TokIdentifier "x"; TokWhitespace LineFeed; TokIdentifier "f"; TokLit (Int 2)]
+            let tokenInput = [TokSpecOp DEF ; TokIdentifier "f" ; TokIdentifier "x" ; TokSpecOp COLON ; TokWhitespace LineFeed; TokLit (Int 2); TokBuiltInOp (Arithm Multiply) ; TokIdentifier "x"; TokWhitespace LineFeed; TokIdentifier "f"; TokLit (Int 2)]
             let expected = Some(FuncDefExp("f",Lambda("x",Call(Call (BuiltInFunc (Arithm Multiply),Literal (Int 2),ID 0), Variable "x",ID 0)),Call (Variable "f",Literal (Int 2),ID 0)), 11)
             Expect.equal (pRun pAst tokenInput) expected "Parsing inp: def f x = \n 2*x \n f 2" 
         }
 
         test "Function Definition containing Lambda" {
-            let tokenInput = [TokSpecOp DEF ; TokIdentifier "f" ; TokSpecOp EQUALS ; TokSpecOp LAMBDA ; TokIdentifier "x" ; TokSpecOp ARROWFUNC ; TokIdentifier "x" ; TokBuiltInOp (Arithm Multiply) ; TokLit (Int 2) ; TokWhitespace LineFeed ; TokIdentifier "f"; TokLit (Int 2)]
+            let tokenInput = [TokSpecOp DEF ; TokIdentifier "f" ; TokSpecOp COLON ; TokSpecOp LAMBDA ; TokIdentifier "x" ; TokSpecOp COLON ; TokIdentifier "x" ; TokBuiltInOp (Arithm Multiply) ; TokLit (Int 2) ; TokWhitespace LineFeed ; TokIdentifier "f"; TokLit (Int 2)]
             let expected = Some(FuncDefExp("f", Lambda("x", Call(Call (BuiltInFunc (Arithm Multiply),Variable "x",ID 0), Literal (Int 2),ID 0)),Call (Variable "f",Literal (Int 2),ID 0)), 12)
-            Expect.equal (pRun pAst tokenInput) expected "Parsing inp: def f = lambda x -> x*2 \n f 2" 
+            Expect.equal (pRun pAst tokenInput) expected "Parsing inp: def f: lambda x: x*2 \n f 2" 
         }
 
         test "2 Function Definitions then one return" {
-            let tokenInput = [TokSpecOp DEF; TokIdentifier "x"; TokSpecOp EQUALS; TokLit (Int 2) ; TokWhitespace LineFeed; TokSpecOp DEF; TokIdentifier "y"; TokSpecOp EQUALS ; TokLit (Int 2); TokWhitespace LineFeed; TokIdentifier "x"]
+            let tokenInput = [TokSpecOp DEF; TokIdentifier "x"; TokSpecOp COLON; TokLit (Int 2) ; TokWhitespace LineFeed; TokSpecOp DEF; TokIdentifier "y"; TokSpecOp COLON ; TokLit (Int 2); TokWhitespace LineFeed; TokIdentifier "x"]
             let expected = Some(FuncDefExp("x",Literal (Int 2),FuncDefExp ("y",Literal (Int 2),Variable "x")), 11)
-            Expect.equal (pRun pAst tokenInput) expected "Parsing inp: def x = 2 \n def y = 2 \n x" 
+            Expect.equal (pRun pAst tokenInput) expected "Parsing inp: def x: 2 \n def y: 2 \n x" 
         }
 
         test "Pair test 1: Empty Pair " {
@@ -128,17 +114,17 @@ let parserTestListWithExpecto =
         
         test "Parser and Lexer Test 1" {
             let expected = Some(FuncDefExp("funkyListHead",Lambda ("arr",Call (BuiltInFunc (ListF Head),Variable "arr",ID 0)),Call (Variable "funkyListHead",Pair (Null,Null,ID 0),ID 0)), 11)
-            Expect.equal ("def funkyListHead arr = \n Head arr \n funkyListHead []" |> Tokenise |> pRun pAst) expected "def funkyListHead arr = \n Head arr \n funkyListHead []"
+            Expect.equal ("def funkyListHead arr: \n head arr \n funkyListHead []" |> Tokenise |> pRun pAst) expected "def funkyListHead arr: \n head arr \n funkyListHead []"
         }
 
         test "Parser and Lexer Test 2" {
             let expected = Some(FuncDefExp("funkyListTail",Lambda ("arr",Call (BuiltInFunc (ListF Tail),Variable "arr",ID 0)),Call(Variable "funkyListTail",Pair (Literal (Int 2),Pair (Literal (Int 3),Null,ID 0),ID 0),ID 0)), 14)
-            Expect.equal ("def funkyListTail arr = \n Tail arr \n funkyListTail [2,3]" |> Tokenise |> pRun pAst) expected "def funkyListTail arr = \n Tail arr \n funkyListTail [2,3]"
+            Expect.equal ("def funkyListTail arr: \n tail arr \n funkyListTail [2,3]" |> Tokenise |> pRun pAst) expected "def funkyListTail arr: \n tail arr \n funkyListTail [2,3]"
         }    
         
         test "Parser and Lexer Test 3" {
             let expected = Some(FuncDefExp("funkyListTail",Lambda ("arr",Call (BuiltInFunc (ListF Tail),Variable "arr",ID 0)),Call(Variable "funkyListTail",Pair(Literal (Int 2),Pair(Literal (Int 3),Pair(Literal (Int 4),Pair (Literal (Int 5),Pair (Literal (Int 6),Null,ID 0),ID 0),ID 0),ID 0),ID 0),ID 0)), 20)
-            Expect.equal ("def funkyListTail arr = \n Tail arr \n funkyListTail [2,3,4,5,6]" |> Tokenise |> pRun pAst) expected "def funkyListTail arr = \n Tail arr \n funkyListTail [2,3,4,5,6]"
+            Expect.equal ("def funkyListTail arr: \n tail arr \n funkyListTail [2,3,4,5,6]" |> Tokenise |> pRun pAst) expected "def funkyListTail arr: \n tail arr \n funkyListTail [2,3,4,5,6]"
         }
     ]
 

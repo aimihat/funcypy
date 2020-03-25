@@ -56,5 +56,5 @@ let main argv =
             | _ -> printf "No output"
         | _ -> printf "No code"
     | _ -> printf "Must enter a .fpy file to execute.\n"
-    
+
     0

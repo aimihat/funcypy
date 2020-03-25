@@ -51,7 +51,6 @@ and StructureID =
     
    
 /////// Memoization /////// 
-
 let RecursionMemo = Dictionary<Identifier, Ast>()
 
 let mutable IDCount = 0
