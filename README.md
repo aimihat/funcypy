@@ -17,14 +17,6 @@ The project codebase is broken down into different modules following the structu
 
 - **Main Module:** F# Modules cannot contain references to later defined values so including a ‘main module’ at the end of the pipeline will provide a frame to import all other modules and bring everything together.
 
-## Extensions
-
-We are proposing several possible extensions for our functional language. Which ones to pursue will be re-evaluated once further progress has been made with the code. All extensions will be completed in pairs because adding a few working extensions is a priority over adding many just for the sake of it.
-
-- **Neater syntax:** Further syntax simplification by removing superfluous constructs such as ‘endif’ and adding constructs like ‘elif’.
-
-- **Standard Library:** Built-in functions and modules, implemented in FuncyPy improve practical utility of the language. This includes functions like list functions such as Head, Tail, and isEmpty.
-
 ## Appendix
 
 ### **Syntax Demo for FuncyPy**
@@ -32,10 +24,16 @@ We are proposing several possible extensions for our functional language. Which 
 The following is an brief sample of the syntax of FuncyPy.
 
 ```F#
-def tempFtoC Ftemp:
-	p = Ftemp+32
-	p*4/5.0
-tempFtoC 32
+def factorial x:
+    if (x==0):
+        1 
+    else:
+        x * (factorial (x-1))
+
+y = 3
+y + (factorial 4)
+
+>> 27
 ```
 
 ## Build instructions
