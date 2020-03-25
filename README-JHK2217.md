@@ -11,4 +11,5 @@ After the first few initial group meetings where we have shared, described and e
 - Re-define extractWord to fail lexing certain characters that do not belong in the code (e.g. %,@,£,¢,§,ˆ,¶ etc.)
 - Comment capabilities: Lexer will ignore all characters between ("//" and "\n") and ("/*" and "*/")
 - Fail the lexing for an empty program (excluding ignored characters)
+- Created test cases for the Lexer, making testing-based adjustments on the way
 - etc..
