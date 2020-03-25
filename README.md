@@ -8,14 +8,10 @@ Our team’s deliverable is a functional language called **FuncyPy**. It uses a 
 
 The project codebase is broken down into different modules following the structure below and tracked with Github for version control. All major functions are tested using automated test cases and property-based tests where possible.
 
-- **Helper Module (Common)** | The helper module will include common type definitions and common helper functions that are used across modules, such as functions that convert between types, and printing functions for debugging.
-- **Lexer Module (James)** **|** **Lexer: string -> List Tokens** | The lexer module will tokenize inputs into specific types to be evaluated by the parser into an Abstract Syntax Tree. The Tokens will include token types such as identifiers, keywords, sperators, operators, literals and comments. An extension goal for this module will be to abstain from using any .NET features or types such as the .NET floating-point type which is used by F# so that everything is FABLE compatible and it can port to other languages like JavaScript.
-- **Parser Module (Yannis) |** **Parser: Token list** **-> Result** | The parser will initially be based on the more generic type parser (similar to Tick 3 extension) with parser combinators and will parse a stream of tokens from the lexer into an abstract syntax tree (see Pratt Parser extension).
-- **Combinator Runtime System (Aimilios) |** **CombinatorRS: AstT -> ‘T** | The runtimes will evaluate expressions with arguments first, except for if-else conditionals which will evaluate condition-first. Input to the run-time will be the environment, with optionally the extended standard library as in extension below below. All functions will be Curried as lambdas, with memoization used throughout reduction (no function applied twice to same arguments).
-
-- **Lambda Evaluation Runtime System (Sergey) |** **Module LambdaEvalRS: AstT -> ‘T** | Lambda body will be evaluated recursively. This requires: Dynamic name values, that can be resolved by holding the environment as a list of name-value pair. (i.e type list = item of name\*value | item\*list), and implementing closures such that all arguments are looked up and used. Finally the language should know when to evaluate. 
-
-- **Main Module:** F# Modules cannot contain references to later defined values so including a ‘main module’ at the end of the pipeline will provide a frame to import all other modules and bring everything together.
+- **Helper Module (Common)** | Includes common type definitions and common helper functions that are used across modules, such as functions that convert between types, and printing functions for debugging.
+- **Lexer Module (James)** **|** **Lexer: string -> List Tokens** | Tokenizes inputs into specific types to be evaluated by the parser into an Abstract Syntax Tree. Tokens include types such as identifiers, keywords, sperators, operators, literals and comments.
+- **Parser Module (Yannis) |** **Parser: Token list** **-> Result** | Uses parser combinators and computation expressions to design a flexible language grammar. Parser was initially based on the more generic type parser (similar to Tick 3 extension) with parser combinators and now parses a stream of tokens from the lexer into an abstract syntax tree.
+- **Combinator Runtime System (Aimilios) |** **CombinatorRS: AstT -> ‘T** | Evaluates expressions with arguments first, except for if-else conditionals which will evaluate condition-first. Input to the run-time is AST output from parser. All functions will be Curried as lambdas, with memoization used throughout reduction (no function applied twice to same arguments).
 
 ## Appendix
 
