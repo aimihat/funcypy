@@ -10,16 +10,6 @@ open System.IO
 
 let expectoConfig = { defaultConfig with verbosity = Logging.LogLevel.Debug }
 
-let inline printChain i =
-    printf "%A\n------------------\n" i
-    i
-
-let testCase =
-    "def g x =\n2*x\ndef f x =\ng x\nf 2"
-
-let testCase1 =
-    "def factorial x =\n if (x==0) then 1 else (x*(factorial (x-1)))\n factorial 4"
-    
 let RUN_TESTS = false;
 
 [<EntryPoint>]
