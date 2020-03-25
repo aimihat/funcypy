@@ -13,6 +13,6 @@ def is_prime n:
 	else:
 		false
 
-is_prime 10
+is_prime 8
 
 

@@ -5,7 +5,7 @@ def addToList x:
 	x = append x 40
 	x
 
-average (addToList [])
+average (addToList [14])
 
 
 # map (lambda x: (x*10)) (range 1 5)

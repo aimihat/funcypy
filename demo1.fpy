@@ -4,5 +4,5 @@ def factorial x:
 	else:
 		x*(factorial (x-1))
 
-x = 3
-x + (factorial 4)
+y = 3
+y + (factorial 4)

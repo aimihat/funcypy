@@ -23,7 +23,7 @@ let main argv =
         
     // Running file - release
     let BuiltInCode = loadCode "src/mainlib/builtin.fpy"
-    match argv with 
+    match argv with
     | [|path|] ->
         let UserCode = loadCode path
         let CombinedCode =
