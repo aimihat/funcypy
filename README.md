@@ -42,11 +42,20 @@ tempFtoC 32
 
 **Windows**
 
-...to be added
+Pull the Repository:
+```git clone https://github.com/AimiHat/FuncyPy```
 
-"To be able to replicate the demo from the repo on a windows machine with a microsoft build, a single setup.bat file that pulls in dependences and allows build"
+- Navigate to src folder in project
+```cd src```
 
-"If there are multiple deliverables - e.g. Expecto tests under dotnet and team deliverable under FABLE or dotnet - I expect the top-level README to have clear instructions for building and running each one, on a windows platform."
+- open CLI
+```Windows + R -> cmd -> Enter```
+
+- Run Setup.bat
+```build```
+
+- For running a test code you need to type funcypy followed by a file name:
+```funcypy simple_test.fpy```
 
 **Mac OSX**
 
