@@ -18,4 +18,5 @@ In summary, some of the features and fixes I worked on during the group phase in
 - Wrote Parser unit tests with Expecto
 - Wrote End-to-end unit tests with Expecto
 - General code cleanup, bug fixes, and improvements
+- Parser improvements with help from Aimilios
 - Took a leadership role to try to keep the group focused and moving with the project
