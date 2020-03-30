@@ -42,7 +42,7 @@ Pull the Repository:
 - open CLI
 ```Windows + R -> cmd -> Enter```
 
-- Run Setup.bat
+- Run build.bat
 ```build```
 
 - For running a test code you need to type funcypy followed by a file name:
