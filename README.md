@@ -39,9 +39,6 @@ y + (factorial 4)
 Pull the Repository:
 ```git clone https://github.com/AimiHat/FuncyPy```
 
-- Navigate to src folder in project
-```cd src```
-
 - open CLI
 ```Windows + R -> cmd -> Enter```
 
@@ -59,7 +56,7 @@ To run tests in development mode, set RUN_TESTS in Program.fs to true and commen
 
 1. **Aimilios**: Runtime improvements, system integration, parser-runtime Integration, CLI, standard lib, basic recursion, demo code
 2. **Yannis**: Parser bug fixes and improvements, parser-lexer Integration, parser-runtime Integration, lexer unit tests, parser tests
-3. **Sergey**: Arithmetic Operators Property-based Tests, Recursion (attempted)
+3. **Sergey**: Arithmetic Operators Property-based Tests, Combinator Z Recursion (attempted), Lambda run-time (individual)
 4. **James**: Lexer bug fixes and improvements, lexer unit tests, Lexer 
 
 Please see Individual README statements root of Master branch for more details on individual contributions during group phase.
