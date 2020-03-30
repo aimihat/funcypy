@@ -63,3 +63,5 @@ To run tests in development mode, set RUN_TESTS in Program.fs to true and commen
 4. **James**: Lexer bug fixes and improvements, lexer unit tests, Lexer 
 
 Please see Individual README statements root of Master branch for more details on individual contributions during group phase.
+
+After the group presentation, we also made changes to allow mutual recursion and included a demo of this as well.
